@@ -1,0 +1,22 @@
+# Harness core maintenance binary
+scripts/bin/harness
+scripts/bin/harness.exe
+
+# Local runtime and secrets
+.env
+.env.*
+!.env.example
+
+# JavaScript
+node_modules/
+.next/
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Editor and operating system
+.DS_Store
