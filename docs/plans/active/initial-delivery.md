@@ -60,11 +60,12 @@ Ngoài phạm vi:
 - [x] Tách product docs, story packet, quyết định kiến trúc và plan từ SPEC đã
   chấp nhận.
 - [x] Scaffold monorepo và runtime local.
-- [x] Triển khai phần giao diện tĩnh của US-01 theo hướng Thư viện học tập.
+- [x] Chốt US-01: landing page, metadata đề published, CTA đăng nhập an toàn,
+  trạng thái loading/empty/error và giao diện kho đề theo gam xanh nước biển.
 - [x] Tạo migration nền và API công khai chỉ đọc đề `published` cho US-01.
 - [x] Đồng bộ migration nền với UUID native, taxonomy chuẩn hóa và ràng buộc
   version/status theo decision 0003.
-- [ ] Triển khai US-01 đến US-03.
+- [ ] Triển khai US-02 đến US-03.
 - [ ] Triển khai US-04 đến US-09.
 - [ ] Triển khai US-10 đến US-13.
 - [ ] Hoàn thành validation và bằng chứng sẵn sàng staging.
@@ -88,6 +89,9 @@ Ngoài phạm vi:
   được điều chỉnh trước khi tiếp tục.
 - 2026-07-26: Migration gốc đã được tái tạo theo decision 0003; API public lấy
   tên chủ đề qua liên kết primary topic.
+- 2026-07-27: US-01 chuyển từ hướng Thư viện học tập sang hướng kho đề luyện
+  thi trực quan hơn, dùng palette xanh nước biển, hero animation nhẹ và không
+  hiển thị đáp án/lời giải trước khi người dùng nộp bài.
 
 ## Validation
 
@@ -99,10 +103,10 @@ Ngoài phạm vi:
   security scan và dependency audit khi scaffold tooling dự án.
 - Scaffold đã xác minh: `pnpm lint`, `pnpm build`, Ruff, Pyright, Pytest và
   `docker compose --env-file .env.example config --quiet`.
-- Docker image build chưa xác minh được vì Docker daemon cục bộ không chạy; cần
-  chạy lại `docker compose --env-file .env.example build` sau khi Docker Desktop
-  hoặc OrbStack sẵn sàng.
+- US-01 đã xác minh: `pnpm lint`, `pnpm build`, Ruff, Pyright, Pytest,
+  `docker compose --env-file .env.example build --pull=false` và Docker web
+  image build sau chỉnh UI.
 
 ## Kết quả
 
-Chưa triển khai.
+US-01 đã chốt. Các US tiếp theo bắt đầu bằng US-02 Google authentication/session.
