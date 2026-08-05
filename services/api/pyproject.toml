@@ -13,6 +13,8 @@ sqlalchemy = "*"
 alembic = "*"
 psycopg = { version = "*", extras = ["binary"] }
 structlog = "*"
+httpx = "^0.28.1"
+pyjwt = {extras = ["crypto"], version = "^2.13.0"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
