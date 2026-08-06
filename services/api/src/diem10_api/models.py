@@ -115,6 +115,38 @@ class OAuthState(Base):
     )
 
 
+class Attempt(Base):
+    __tablename__ = "attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    exam_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("exam_versions.id"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(30), index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempt_number: Mapped[int] = mapped_column(Integer)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('in_progress', 'submitted', 'expired_and_submitted')",
+            name="attempts_status_check",
+        ),
+        CheckConstraint("expires_at > started_at", name="attempts_expires_at_check"),
+        CheckConstraint("attempt_number > 0", name="attempts_number_check"),
+        Index("ix_attempts_user_started_at", "user_id", "started_at"),
+        Index(
+            "uq_attempts_open_user_exam_version",
+            "user_id",
+            "exam_version_id",
+            unique=True,
+            postgresql_where=(status == "in_progress"),
+        ),
+    )
+
+
 class Topic(Base):
     __tablename__ = "topics"
 

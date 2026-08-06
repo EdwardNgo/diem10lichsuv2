@@ -13,6 +13,7 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry install --only main --no-root
 
 COPY src ./src
+COPY scripts ./scripts
 COPY alembic.ini ./
 COPY alembic ./alembic
 
