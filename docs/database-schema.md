@@ -20,11 +20,13 @@ erDiagram
     users ||--o{ admin_allowlist : "cấp quyền"
     exams ||--o{ exam_versions : "có phiên bản"
     exam_versions ||--o{ questions : "gồm"
-    questions ||--o{ question_options : "có lựa chọn"
+    questions ||--o{ question_options : "có lựa chọn ABCD"
+    questions ||--o{ question_statements : "có phát biểu"
     exam_versions ||--o{ exam_version_topics : "phân loại"
     topics ||--o{ exam_version_topics : "gắn với"
     exam_versions ||--o{ attempts : "snapshot"
-    attempts ||--o{ attempt_answers : "lưu đáp án"
+    attempts ||--o{ attempt_answers : "lưu đáp án câu"
+    attempts ||--o{ attempt_statement_answers : "lưu đúng/sai"
     attempts ||--|| attempt_results : "có kết quả"
     assets ||--o{ asset_links : "được liên kết"
     exam_versions ||--o{ import_jobs : "được tạo bởi"
@@ -178,20 +180,24 @@ taxonomy chuẩn hóa.
 Khóa chính ghép: `(exam_version_id, topic_id)`. Chỉ một topic chính mỗi version
 qua partial unique index `exam_version_id where is_primary`.
 
-### `questions` và `question_options`
+### `questions`, `question_options` và `question_statements`
 
-`questions` thuộc một `exam_version`; `question_options` thuộc một question.
-
-
-| Bảng               | Cột cốt lõi                                                | Ràng buộc                                            |
-| ------------------ | ---------------------------------------------------------- | ---------------------------------------------------- |
-| `questions`        | `id`, `exam_version_id`, `position`, `body`, `explanation` | unique `(exam_version_id, position)`, `position > 0` |
-| `question_options` | `id`, `question_id`, `position`, `body`, `is_correct`      | unique `(question_id, position)`, `position > 0`     |
+`questions` thuộc một `exam_version`. Câu Phần I dùng `question_options` cho
+bốn lựa chọn ABCD. Câu Phần II dùng `question_statements` cho bốn phát biểu
+Đúng/Sai và lưu đoạn tư liệu trên chính `questions`.
 
 
-Quy tắc “mỗi câu có đúng một đáp án đúng” cần validation service khi publish và
-PostgreSQL constraint trigger nếu muốn bảo vệ tuyệt đối ở tầng database. Không
-thể dùng check constraint thông thường vì nó liên quan nhiều hàng.
+| Bảng                 | Cột cốt lõi                                                                                          | Ràng buộc                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `questions`          | `id`, `exam_version_id`, `position`, `part_number`, `part_position`, `question_type`, `body`, `source_text`, `explanation` | unique `(exam_version_id, position)`, unique `(exam_version_id, part_number, part_position)`, `position > 0`, `part_number in (1, 2)` |
+| `question_options`   | `id`, `question_id`, `position`, `body`, `is_correct`                                                | unique `(question_id, position)`, `position > 0`     |
+| `question_statements` | `id`, `question_id`, `position`, `body`, `is_correct`                                               | unique `(question_id, position)`, `position > 0`     |
+
+
+Quy tắc publish cần validation service vì phụ thuộc nhiều hàng: đề mới phải có
+24 câu `multiple_choice` ở Phần I và 4 câu `true_false_group` ở Phần II. Mỗi câu
+Phần I có đúng bốn lựa chọn và một đáp án đúng. Mỗi câu Phần II có `source_text`
+và đúng bốn phát biểu, mỗi phát biểu có đáp án boolean.
 
 ## 3. Lượt làm bài và kết quả
 
@@ -201,19 +207,23 @@ US-05 đến US-09.
 ### `attempts`
 
 
-| Cột                                        | Kiểu          | Ràng buộc                                           |
-| ------------------------------------------ | ------------- | --------------------------------------------------- |
-| `id`                                       | `uuid`        | PK                                                  |
-| `user_id`                                  | `uuid`        | FK `users`, not null                                |
-| `exam_version_id`                          | `uuid`        | FK `exam_versions`, not null                        |
-| `status`                                   | `varchar(30)` | `in_progress`, `submitted`, `expired_and_submitted` |
-| `started_at`, `expires_at`, `submitted_at` | `timestamptz` | `expires_at > started_at`                           |
-| `attempt_number`                           | `integer`     | lớn hơn 0                                           |
+| Cột                                                     | Kiểu          | Ràng buộc                                                        |
+| ------------------------------------------------------- | ------------- | ---------------------------------------------------------------- |
+| `id`                                                    | `uuid`        | PK                                                               |
+| `user_id`                                               | `uuid`        | FK `users`, not null                                             |
+| `exam_version_id`                                       | `uuid`        | FK `exam_versions`, not null                                     |
+| `status`                                                | `varchar(30)` | `in_progress`, `submitted`, `expired_and_submitted`, `abandoned` |
+| `started_at`, `expires_at`, `paused_at`, `submitted_at` | `timestamptz` | `expires_at > started_at`; hai cột sau nullable                   |
+| `attempt_number`                                        | `integer`     | lớn hơn 0                                                        |
 
 
 Partial unique index `(user_id, exam_version_id) where status = 'in_progress'`
 ngăn hai attempt mở cùng phiên bản. Để ngăn hai attempt mở theo hai version của
 cùng exam, service cần kiểm tra theo `exams.id` trong transaction.
+
+`paused_at` ghi thời điểm người dùng rời màn hình làm bài. Khi tiếp tục,
+`expires_at` được cộng thêm khoảng `now - paused_at`, sau đó `paused_at` trở lại
+`null`.
 
 ### `attempt_answers`
 
@@ -229,6 +239,19 @@ cùng exam, service cần kiểm tra theo `exams.id` trong transaction.
 
 Khóa chính ghép: `(attempt_id, question_id)`.
 
+### `attempt_statement_answers`
+
+| Cột              | Kiểu          | Ràng buộc                         |
+| ---------------- | ------------- | --------------------------------- |
+| `attempt_id`     | `uuid`        | FK `attempts`                     |
+| `question_id`    | `uuid`        | FK `questions`                    |
+| `statement_id`   | `uuid`        | FK `question_statements`          |
+| `selected_value` | `boolean`     | nullable để biểu diễn bỏ trống    |
+| `updated_at`     | `timestamptz` | not null                          |
+
+Khóa chính ghép: `(attempt_id, statement_id)`. Service đảm bảo
+`statement_id` thuộc `question_id` và `question_id` thuộc snapshot attempt.
+
 ### `attempt_results`
 
 
@@ -236,12 +259,24 @@ Khóa chính ghép: `(attempt_id, question_id)`.
 | ------------------------------------------------------ | -------------- | ---------------- |
 | `attempt_id`                                           | `uuid`         | PK/FK `attempts` |
 | `correct_count`, `incorrect_count`, `unanswered_count` | `integer`      | không âm         |
-| `score`                                                | `numeric(4,2)` | từ 0 đến 10      |
+| `part1_score`, `part2_score`, `score`                  | `numeric(4,2)` | từ 0 đến 10      |
 | `graded_at`                                            | `timestamptz`  | not null         |
 
 
 Kết quả được lưu một lần khi nộp/hết giờ; không chấm lại sau khi admin thay đổi
 version đề.
+
+### `attempt_question_results`
+
+| Cột                                                        | Kiểu           | Ràng buộc                      |
+| ---------------------------------------------------------- | -------------- | ------------------------------ |
+| `attempt_id`                                               | `uuid`         | FK `attempts`                  |
+| `question_id`                                              | `uuid`         | FK `questions`                 |
+| `part_number`, `correct_count`, `total_count`              | `integer`      | không âm                       |
+| `earned_score`, `max_score`                                | `numeric(4,2)` | không âm                       |
+
+Khóa chính ghép: `(attempt_id, question_id)`. Bảng này là snapshot breakdown
+để trang kết quả không cần chấm lại.
 
 ## 4. Tài sản và parser
 

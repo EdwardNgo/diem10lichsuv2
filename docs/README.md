@@ -9,6 +9,8 @@ upstream-maintenance material only when the task explicitly needs it.
   completion behavior.
 - `database-schema.md`: database tables, relationships, constraints, and
   migration sequence for the application.
+- `operations/runbook.md`: environment runbook and migration procedure for
+  local, UAT, and VPS deployments.
 - `product/`: consumer-owned product behavior derived from accepted intent.
 - `plans/`: one evolving Git-native plan for work that needs durable memory.
 - `decisions/`: lasting product and architecture choices.

@@ -18,6 +18,7 @@ from diem10_api.models import (
     ExamVersionTopic,
     Question,
     QuestionOption,
+    QuestionStatement,
     Topic,
     User,
     UserSession,
@@ -103,7 +104,11 @@ def create_exam(
     question = Question(
         exam_version_id=version.id,
         position=1,
+        part_number=1,
+        part_position=1,
+        question_type="multiple_choice",
         body=f"Câu hỏi của {title}",
+        source_text=None,
         explanation="Lời giải không được trả qua API chi tiết.",
     )
     session.add(question)
@@ -312,6 +317,33 @@ def test_seed_demo_exams_is_idempotent(tmp_path: Path) -> None:
                 select(func.count())
                 .select_from(ExamVersion)
                 .where(ExamVersion.status == "published")
+            )
+            == 4
+        )
+        assert session.scalar(select(func.count()).select_from(Question)) == 140
+        assert session.scalar(select(func.count()).select_from(QuestionOption)) == 480
+        assert (
+            session.scalar(select(func.count()).select_from(QuestionStatement)) == 80
+        )
+        published_version = session.scalar(
+            select(ExamVersion).where(ExamVersion.status == "published")
+        )
+        assert published_version is not None
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(Question)
+                .where(Question.exam_version_id == published_version.id)
+                .where(Question.part_number == 1)
+            )
+            == 24
+        )
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(Question)
+                .where(Question.exam_version_id == published_version.id)
+                .where(Question.part_number == 2)
             )
             == 4
         )

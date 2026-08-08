@@ -33,7 +33,9 @@ def upgrade() -> None:
         sa.CheckConstraint("attempt_number > 0", name="attempts_number_check"),
         sa.CheckConstraint("expires_at > started_at", name="attempts_expires_at_check"),
         sa.CheckConstraint(
-            "status IN ('in_progress', 'submitted', 'expired_and_submitted')",
+            "status IN ("
+            "'in_progress', 'submitted', 'expired_and_submitted', 'abandoned'"
+            ")",
             name="attempts_status_check",
         ),
         sa.ForeignKeyConstraint(["exam_version_id"], ["exam_versions.id"]),
@@ -61,6 +63,7 @@ def upgrade() -> None:
         ["user_id", "exam_version_id"],
         unique=True,
         postgresql_where=sa.text("status = 'in_progress'"),
+        sqlite_where=sa.text("status = 'in_progress'"),
     )
 
 
@@ -70,6 +73,7 @@ def downgrade() -> None:
         "uq_attempts_open_user_exam_version",
         table_name="attempts",
         postgresql_where=sa.text("status = 'in_progress'"),
+        sqlite_where=sa.text("status = 'in_progress'"),
     )
     op.drop_index("ix_attempts_user_started_at", table_name="attempts")
     op.drop_index(op.f("ix_attempts_user_id"), table_name="attempts")

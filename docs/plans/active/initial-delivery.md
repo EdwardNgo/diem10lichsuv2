@@ -67,6 +67,8 @@ Ngoài phạm vi:
   version/status theo decision 0003.
 - [ ] Triển khai US-02 đến US-03.
 - [ ] Triển khai US-04 đến US-09.
+- [x] Sửa vòng đời US-05/US-07 để lượt làm tạm dừng trên server khi học sinh
+  rời bài và tiếp tục với đúng thời gian còn lại.
 - [ ] Triển khai US-10 đến US-13.
 - [ ] Hoàn thành validation và bằng chứng sẵn sàng staging.
 
@@ -92,6 +94,12 @@ Ngoài phạm vi:
 - 2026-07-27: US-01 chuyển từ hướng Thư viện học tập sang hướng kho đề luyện
   thi trực quan hơn, dùng palette xanh nước biển, hero animation nhẹ và không
   hiển thị đáp án/lời giải trước khi người dùng nộp bài.
+- 2026-08-06: Đề thi Lịch sử chuyển sang cấu trúc 24 câu ABCD Phần I và 4 câu
+  tư liệu Đúng/Sai Phần II. Phần I mỗi câu 0,25 điểm; Phần II mỗi câu quy đổi
+  theo số phát biểu đúng 0/1/2/3/4 thành 0/0,10/0,25/0,50/1,00 điểm.
+- 2026-08-08: Đồng hồ lượt làm tạm dừng khi học sinh rời màn hình. Backend lưu
+  `paused_at` và dời `expires_at` theo khoảng tạm dừng khi tiếp tục, nên client
+  không thể tự sửa thời gian còn lại.
 
 ## Validation
 
@@ -106,6 +114,8 @@ Ngoài phạm vi:
 - US-01 đã xác minh: `pnpm lint`, `pnpm build`, Ruff, Pyright, Pytest,
   `docker compose --env-file .env.example build --pull=false` và Docker web
   image build sau chỉnh UI.
+- Tạm dừng/tiếp tục lượt làm đã xác minh bằng `ruff check .`, toàn bộ 20 test
+  API, migration chain `alembic upgrade head`, cùng `pnpm lint` và `pnpm build`.
 
 ## Kết quả
 

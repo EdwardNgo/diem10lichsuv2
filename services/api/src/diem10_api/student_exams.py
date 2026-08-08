@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,6 +15,7 @@ from diem10_api.models import (
     ExamVersionTopic,
     Question,
     QuestionOption,
+    QuestionStatement,
     Topic,
     User,
 )
@@ -52,8 +54,18 @@ class StudentExamOption(BaseModel):
 class StudentExamQuestion(BaseModel):
     id: str
     position: int
+    part_number: int
+    part_position: int
+    question_type: str
     body: str
+    source_text: str | None
     options: list[StudentExamOption]
+    statements: list[StudentExamOption]
+
+
+class StudentActiveAttempt(BaseModel):
+    id: str
+    remaining_seconds: int
 
 
 class StudentExamDetail(BaseModel):
@@ -67,6 +79,7 @@ class StudentExamDetail(BaseModel):
     duration_minutes: int
     question_count: int
     completion_status: CompletionStatus
+    active_attempt: StudentActiveAttempt | None
     questions: list[StudentExamQuestion]
 
 
@@ -97,21 +110,33 @@ def _completion_status_for_versions(
     if not version_ids:
         return {}
 
+    now = _now()
     attempts = session.execute(
-        select(Attempt.exam_version_id, Attempt.status, Attempt.started_at)
+        select(
+            Attempt.exam_version_id,
+            Attempt.status,
+            Attempt.started_at,
+            Attempt.expires_at,
+            Attempt.paused_at,
+        )
         .where(Attempt.user_id == user.id)
         .where(Attempt.exam_version_id.in_(version_ids))
         .order_by(Attempt.started_at.desc())
     ).all()
 
     statuses: dict[object, CompletionStatus] = {}
-    for version_id, attempt_status, _ in attempts:
+    for version_id, attempt_status, _, expires_at, paused_at in attempts:
         current = statuses.get(version_id)
         if current == "in_progress":
             continue
-        if attempt_status == "in_progress":
+        if attempt_status == "in_progress" and (
+            paused_at is not None or _ensure_aware(expires_at) > now
+        ):
             statuses[version_id] = "in_progress"
-        elif current is None:
+        elif (
+            attempt_status in {"submitted", "expired_and_submitted"}
+            and current is None
+        ):
             statuses[version_id] = "completed"
 
     return statuses
@@ -125,6 +150,43 @@ def _completion_status(
     return _completion_status_for_versions(session, user, [version_id]).get(
         version_id, "not_started"
     )
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _ensure_aware(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
+def _active_attempt_for_version(
+    session: Session,
+    user: User,
+    version_id: object,
+) -> StudentActiveAttempt | None:
+    attempt = session.scalar(
+        select(Attempt)
+        .where(Attempt.user_id == user.id)
+        .where(Attempt.exam_version_id == version_id)
+        .where(Attempt.status == "in_progress")
+        .order_by(Attempt.started_at.desc())
+    )
+    if attempt is None:
+        return None
+    remaining_until = (
+        _ensure_aware(attempt.paused_at)
+        if attempt.paused_at is not None
+        else _now()
+    )
+    remaining_seconds = int(
+        (_ensure_aware(attempt.expires_at) - remaining_until).total_seconds()
+    )
+    if remaining_seconds <= 0:
+        return None
+    return StudentActiveAttempt(id=str(attempt.id), remaining_seconds=remaining_seconds)
 
 
 @router.get("", response_model=StudentExamPage)
@@ -206,24 +268,48 @@ def get_student_exam_detail(
     questions = session.scalars(
         select(Question)
         .where(Question.exam_version_id == version.id)
-        .order_by(Question.position.asc())
+        .order_by(
+            Question.part_number.asc(),
+            Question.part_position.asc(),
+            Question.position.asc(),
+        )
     ).all()
     options_by_question_id: dict[object, list[StudentExamOption]] = {
         question.id: [] for question in questions
     }
-    option_rows = session.scalars(
-        select(QuestionOption)
-        .where(QuestionOption.question_id.in_(options_by_question_id.keys()))
-        .order_by(QuestionOption.question_id.asc(), QuestionOption.position.asc())
-    ).all()
-    for option in option_rows:
-        options_by_question_id[option.question_id].append(
-            StudentExamOption(
-                id=str(option.id),
-                position=option.position,
-                body=option.body,
+    statements_by_question_id: dict[object, list[StudentExamOption]] = {
+        question.id: [] for question in questions
+    }
+    if options_by_question_id:
+        option_rows = session.scalars(
+            select(QuestionOption)
+            .where(QuestionOption.question_id.in_(options_by_question_id.keys()))
+            .order_by(QuestionOption.question_id.asc(), QuestionOption.position.asc())
+        ).all()
+        for option in option_rows:
+            options_by_question_id[option.question_id].append(
+                StudentExamOption(
+                    id=str(option.id),
+                    position=option.position,
+                    body=option.body,
+                )
             )
-        )
+        statement_rows = session.scalars(
+            select(QuestionStatement)
+            .where(QuestionStatement.question_id.in_(statements_by_question_id.keys()))
+            .order_by(
+                QuestionStatement.question_id.asc(),
+                QuestionStatement.position.asc(),
+            )
+        ).all()
+        for statement in statement_rows:
+            statements_by_question_id[statement.question_id].append(
+                StudentExamOption(
+                    id=str(statement.id),
+                    position=statement.position,
+                    body=statement.body,
+                )
+            )
 
     return StudentExamDetail(
         slug=exam.slug,
@@ -236,12 +322,18 @@ def get_student_exam_detail(
         duration_minutes=version.duration_minutes,
         question_count=question_count,
         completion_status=_completion_status(session, current_user, version.id),
+        active_attempt=_active_attempt_for_version(session, current_user, version.id),
         questions=[
             StudentExamQuestion(
                 id=str(question.id),
                 position=question.position,
+                part_number=question.part_number,
+                part_position=question.part_position,
+                question_type=question.question_type,
                 body=question.body,
+                source_text=question.source_text,
                 options=options_by_question_id[question.id],
+                statements=statements_by_question_id[question.id],
             )
             for question in questions
         ],

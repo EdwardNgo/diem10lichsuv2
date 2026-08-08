@@ -122,10 +122,11 @@ Là học sinh, tôi muốn lượt làm có thời gian và nhất quán trong 
 Tiêu chí chấp nhận:
 
 - Bắt đầu tạo lượt làm với phiên bản đề, thời gian bắt đầu và thời điểm hết hạn
-  cố định.
+  do server quản lý.
 - Server tính hạn, chống thay đổi đồng hồ client.
-- Mở lại đề chưa hết hạn tiếp tục lượt làm có sẵn.
-- Xác nhận bắt đầu hiển thị số câu và thời lượng.
+- Rời màn hình làm bài tạm dừng đồng hồ trên server; mở lại tiếp tục lượt làm có
+  sẵn với đúng thời gian còn lại.
+- Xác nhận bắt đầu hiển thị cấu trúc 24 câu Phần I, 4 câu Phần II và thời lượng.
 
 Luồng thuận:
 
@@ -133,7 +134,9 @@ Luồng thuận:
 2. Bấm bắt đầu; backend tạo attempt kèm snapshot phiên bản, `started_at` và
    `expires_at`.
 3. Frontend mở câu đầu, hiển thị đồng hồ dựa trên `expires_at`.
-4. Học sinh quay lại trước hạn được tiếp tục đúng attempt đó.
+4. Khi học sinh rời bài, backend ghi `paused_at`.
+5. Học sinh quay lại được tiếp tục đúng attempt đó; backend dời `expires_at`
+   theo thời gian tạm dừng và xóa `paused_at`.
 
 Ngoại lệ:
 
@@ -148,7 +151,8 @@ Là học sinh, tôi muốn đáp án được lưu khi điều hướng đề.
 
 Tiêu chí chấp nhận:
 
-- Một câu chọn tối đa một lựa chọn và có thể hiển thị ảnh liên kết.
+- Câu Phần I chọn tối đa một lựa chọn ABCD; câu Phần II chọn Đúng/Sai cho từng
+  phát biểu và có thể hiển thị ảnh liên kết.
 - UI hiển thị tiến độ, điều hướng và dấu xem lại.
 - Đáp án đã lưu được khôi phục sau refresh hoặc đổi thiết bị khi lượt làm còn
   hiệu lực.
@@ -177,6 +181,7 @@ Là học sinh, tôi muốn đếm ngược chính xác và xử lý đúng khi 
 Tiêu chí chấp nhận:
 
 - Đồng hồ hiển thị lấy từ thời điểm hết hạn do server trả về.
+- Thời gian không giảm khi lượt làm đã được tạm dừng do người dùng rời bài.
 - UI và backend đều chặn thay đổi đáp án sau khi hết hạn.
 - Server đóng và chấm bằng đáp án lưu gần nhất.
 - Hết giờ được hiển thị như trạng thái hoàn thành, không phải lỗi hệ thống.
@@ -184,15 +189,17 @@ Tiêu chí chấp nhận:
 Luồng thuận:
 
 1. UI cập nhật đếm ngược từ `expires_at`.
-2. Khi đồng hồ về 0, UI dừng chỉnh sửa và yêu cầu tải kết quả.
-3. Backend đóng attempt, chấm bằng đáp án đã lưu gần nhất và trả kết quả.
+2. Khi rời bài, UI yêu cầu server tạm dừng; khi mở lại, UI yêu cầu server tiếp
+   tục và nhận `expires_at` mới.
+3. Khi đồng hồ về 0, UI dừng chỉnh sửa và yêu cầu tải kết quả.
+4. Backend đóng attempt, chấm bằng đáp án đã lưu gần nhất và trả kết quả.
 
 Ngoại lệ:
 
 - Tab bị ngủ hoặc đồng hồ client chậm: request tiếp theo vẫn bị backend kiểm tra
   `expires_at` và từ chối sửa đáp án.
-- Học sinh offline khi hết giờ: lần kết nối lại đầu tiên nhận trạng thái đã hết
-  giờ và kết quả đã chấm.
+- Mất kết nối khi yêu cầu tạm dừng: UI báo chưa tạm dừng và không tự điều hướng;
+  đóng tab dùng yêu cầu `keepalive` theo khả năng của trình duyệt.
 - Tác vụ đóng bị gửi lặp: chấm điểm idempotent, không thay đổi kết quả.
 
 ## US-08 — Nộp và xem kết quả
@@ -204,7 +211,8 @@ Tiêu chí chấp nhận:
 - Nộp bài yêu cầu xác nhận và chỉ ra câu chưa trả lời.
 - Nộp lặp trả cùng kết quả, không tạo lượt làm mới hoặc thay đổi điểm.
 - Kết quả hiển thị tổng, điểm thang 10 và thời gian dùng.
-- Mỗi câu có đáp án đã chọn, đáp án đúng, trạng thái và lời giải.
+- Mỗi câu có đáp án đã chọn, đáp án đúng, trạng thái, điểm đạt được và lời giải;
+  câu Phần II hiển thị trạng thái từng phát biểu.
 
 Luồng thuận:
 
@@ -250,16 +258,18 @@ Là admin, tôi muốn tạo bản nháp đề tin cậy mà không cần nhập
 
 Tiêu chí chấp nhận:
 
-- Bản nháp hỗ trợ metadata bắt buộc, câu hỏi, lựa chọn, đáp án đúng và lời giải.
-- Validation xuất bản yêu cầu mỗi câu có ít nhất hai lựa chọn và đúng một đáp án
-  đúng.
+- Bản nháp hỗ trợ metadata bắt buộc, 24 câu ABCD Phần I, 4 câu tư liệu Phần II,
+  lựa chọn, phát biểu, đáp án đúng và lời giải.
+- Validation xuất bản yêu cầu đúng 24 câu Phần I có bốn lựa chọn và đúng một đáp
+  án đúng; đúng 4 câu Phần II có đoạn tư liệu và bốn phát biểu Đúng/Sai.
 - Admin có thể thêm, sửa, xóa mềm và sắp xếp câu hỏi/lựa chọn nháp.
 - Sửa nội dung đã xuất bản tạo phiên bản nháp mới.
 
 Luồng thuận:
 
 1. Admin tạo đề nháp, nhập metadata và thời lượng.
-2. Admin thêm câu, lựa chọn, đáp án đúng, lời giải và ảnh nếu cần.
+2. Admin thêm câu ABCD, câu tư liệu, phát biểu Đúng/Sai, đáp án đúng, lời giải
+   và ảnh nếu cần.
 3. Admin lưu nháp, xem validation theo từng câu, chỉnh sửa đến khi hợp lệ.
 4. Với đề published, admin tạo phiên bản nháp mới rồi sửa trên phiên bản này.
 
@@ -267,7 +277,8 @@ Ngoại lệ:
 
 - Lưu khi thiếu trường bắt buộc: trả validation theo trường, vẫn giữ dữ liệu đã
   nhập trong form.
-- Một câu có không/multiple đáp án đúng: chặn publish và chỉ rõ câu lỗi.
+- Một câu ABCD có không/multiple đáp án đúng hoặc câu tư liệu thiếu bốn phát
+  biểu Đúng/Sai: chặn publish và chỉ rõ câu lỗi.
 - Hai admin sửa cùng nháp: phát hiện version conflict và yêu cầu tải lại/giải
   quyết thay đổi, không ghi đè im lặng.
 - Admin cố sửa trực tiếp phiên bản đã dùng cho attempt: backend từ chối và yêu

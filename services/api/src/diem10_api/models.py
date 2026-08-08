@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
@@ -10,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     Uuid,
@@ -126,12 +128,15 @@ class Attempt(Base):
     status: Mapped[str] = mapped_column(String(30), index=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     attempt_number: Mapped[int] = mapped_column(Integer)
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('in_progress', 'submitted', 'expired_and_submitted')",
+            "status IN ("
+            "'in_progress', 'submitted', 'expired_and_submitted', 'abandoned'"
+            ")",
             name="attempts_status_check",
         ),
         CheckConstraint("expires_at > started_at", name="attempts_expires_at_check"),
@@ -143,7 +148,114 @@ class Attempt(Base):
             "exam_version_id",
             unique=True,
             postgresql_where=(status == "in_progress"),
+            sqlite_where=(status == "in_progress"),
         ),
+    )
+
+
+class AttemptAnswer(Base):
+    __tablename__ = "attempt_answers"
+
+    attempt_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("attempts.id"), primary_key=True
+    )
+    question_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("questions.id"), primary_key=True
+    )
+    selected_option_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("question_options.id")
+    )
+    is_marked_for_review: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_attempt_answers_attempt_updated_at", "attempt_id", "updated_at"),
+    )
+
+
+class AttemptStatementAnswer(Base):
+    __tablename__ = "attempt_statement_answers"
+
+    attempt_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("attempts.id"), primary_key=True
+    )
+    question_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("questions.id"))
+    statement_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("question_statements.id"), primary_key=True
+    )
+    selected_value: Mapped[bool | None] = mapped_column(Boolean)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_attempt_statement_answers_attempt_updated_at",
+            "attempt_id",
+            "updated_at",
+        ),
+    )
+
+
+class AttemptResult(Base):
+    __tablename__ = "attempt_results"
+
+    attempt_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("attempts.id"), primary_key=True
+    )
+    correct_count: Mapped[int] = mapped_column(Integer)
+    incorrect_count: Mapped[int] = mapped_column(Integer)
+    unanswered_count: Mapped[int] = mapped_column(Integer)
+    part1_score: Mapped[Decimal] = mapped_column(Numeric(4, 2))
+    part2_score: Mapped[Decimal] = mapped_column(Numeric(4, 2))
+    score: Mapped[Decimal] = mapped_column(Numeric(4, 2))
+    graded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint("correct_count >= 0", name="attempt_results_correct_check"),
+        CheckConstraint("incorrect_count >= 0", name="attempt_results_incorrect_check"),
+        CheckConstraint(
+            "unanswered_count >= 0", name="attempt_results_unanswered_check"
+        ),
+        CheckConstraint(
+            "part1_score >= 0 AND part1_score <= 6",
+            name="attempt_results_part1_score_check",
+        ),
+        CheckConstraint(
+            "part2_score >= 0 AND part2_score <= 4",
+            name="attempt_results_part2_score_check",
+        ),
+        CheckConstraint(
+            "score >= 0 AND score <= 10", name="attempt_results_score_check"
+        ),
+    )
+
+
+class AttemptQuestionResult(Base):
+    __tablename__ = "attempt_question_results"
+
+    attempt_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("attempts.id"), primary_key=True
+    )
+    question_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("questions.id"), primary_key=True
+    )
+    part_number: Mapped[int] = mapped_column(Integer)
+    correct_count: Mapped[int] = mapped_column(Integer)
+    total_count: Mapped[int] = mapped_column(Integer)
+    earned_score: Mapped[Decimal] = mapped_column(Numeric(4, 2))
+    max_score: Mapped[Decimal] = mapped_column(Numeric(4, 2))
+
+    __table_args__ = (
+        CheckConstraint("part_number IN (1, 2)", name="attempt_qr_part_check"),
+        CheckConstraint("correct_count >= 0", name="attempt_qr_correct_check"),
+        CheckConstraint("total_count > 0", name="attempt_qr_total_check"),
+        CheckConstraint("earned_score >= 0", name="attempt_qr_earned_score_check"),
+        CheckConstraint("max_score > 0", name="attempt_qr_max_score_check"),
     )
 
 
@@ -247,13 +359,30 @@ class Question(Base):
         ForeignKey("exam_versions.id"), index=True
     )
     position: Mapped[int] = mapped_column(Integer)
+    part_number: Mapped[int] = mapped_column(Integer, default=1)
+    part_position: Mapped[int] = mapped_column(Integer, default=1)
+    question_type: Mapped[str] = mapped_column(String(30), default="multiple_choice")
     body: Mapped[str] = mapped_column(Text)
+    source_text: Mapped[str | None] = mapped_column(Text)
     explanation: Mapped[str] = mapped_column(Text)
 
     __table_args__ = (
         CheckConstraint("position > 0", name="questions_position_check"),
+        CheckConstraint("part_number IN (1, 2)", name="questions_part_check"),
+        CheckConstraint("part_position > 0", name="questions_part_position_check"),
+        CheckConstraint(
+            "question_type IN ('multiple_choice', 'true_false_group')",
+            name="questions_type_check",
+        ),
         Index(
             "uq_questions_version_position", "exam_version_id", "position", unique=True
+        ),
+        Index(
+            "uq_questions_version_part_position",
+            "exam_version_id",
+            "part_number",
+            "part_position",
+            unique=True,
         ),
     )
 
@@ -272,4 +401,23 @@ class QuestionOption(Base):
     __table_args__ = (
         CheckConstraint("position > 0", name="question_options_position_check"),
         Index("uq_question_options_position", "question_id", "position", unique=True),
+    )
+
+
+class QuestionStatement(Base):
+    __tablename__ = "question_statements"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    question_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("questions.id"), index=True
+    )
+    position: Mapped[int] = mapped_column(Integer)
+    body: Mapped[str] = mapped_column(Text)
+    is_correct: Mapped[bool] = mapped_column(Boolean)
+
+    __table_args__ = (
+        CheckConstraint("position > 0", name="question_statements_position_check"),
+        Index(
+            "uq_question_statements_position", "question_id", "position", unique=True
+        ),
     )

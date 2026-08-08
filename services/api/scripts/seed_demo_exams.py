@@ -3,8 +3,9 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TypeAlias
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
@@ -16,15 +17,27 @@ from diem10_api.models import (
     ExamVersionTopic,
     Question,
     QuestionOption,
+    QuestionStatement,
     Topic,
 )
 
 
 @dataclass(frozen=True)
-class DemoQuestion:
+class DemoMultipleChoiceQuestion:
     body: str
     explanation: str
     options: tuple[tuple[str, bool], ...]
+
+
+@dataclass(frozen=True)
+class DemoTrueFalseQuestion:
+    body: str
+    source_text: str
+    explanation: str
+    statements: tuple[tuple[str, bool], ...]
+
+
+DemoQuestion: TypeAlias = DemoMultipleChoiceQuestion | DemoTrueFalseQuestion
 
 
 @dataclass(frozen=True)
@@ -50,102 +63,124 @@ TOPICS = (
 )
 
 
+def _multiple_choice_questions(
+    topic_name: str,
+) -> tuple[DemoMultipleChoiceQuestion, ...]:
+    questions: list[DemoMultipleChoiceQuestion] = []
+    stems = (
+        "Sự kiện tiêu biểu của {topic} ở mốc số {index} là gì?",
+        "Nhận định nào đúng về {topic} trong giai đoạn ôn tập số {index}?",
+        "Yếu tố nào có ý nghĩa nổi bật đối với {topic} ở câu {index}?",
+        "Kết quả lịch sử nào gắn với {topic} ở nội dung số {index}?",
+    )
+    for index in range(1, 25):
+        correct_position = ((index - 1) % 4) + 1
+        options = tuple(
+            (
+                f"Phương án {label} cho nội dung {index}",
+                position == correct_position,
+            )
+            for position, label in enumerate(("A", "B", "C", "D"), start=1)
+        )
+        questions.append(
+            DemoMultipleChoiceQuestion(
+                body=stems[index % len(stems)].format(
+                    topic=topic_name,
+                    index=index,
+                ),
+                explanation=(
+                    f"Đáp án đúng là phương án {correct_position} vì phù hợp với "
+                    f"trọng tâm {topic_name} ở nội dung {index}."
+                ),
+                options=options,
+            )
+        )
+    return tuple(questions)
+
+
+def _true_false_questions(topic_name: str) -> tuple[DemoTrueFalseQuestion, ...]:
+    questions: list[DemoTrueFalseQuestion] = []
+    patterns = (
+        (True, False, True, False),
+        (False, True, True, False),
+        (True, True, False, False),
+        (False, True, False, True),
+    )
+    for index in range(1, 5):
+        statements = tuple(
+            (
+                f"Phát biểu {label.lower()} về tư liệu {index} của {topic_name}.",
+                is_correct,
+            )
+            for label, is_correct in zip(("A", "B", "C", "D"), patterns[index - 1])
+        )
+        questions.append(
+            DemoTrueFalseQuestion(
+                body=(
+                    f"Đọc tư liệu {index} và xác định tính đúng sai của các "
+                    "phát biểu."
+                ),
+                source_text=(
+                    f"Tư liệu {index}: Nội dung tóm lược về {topic_name}, nêu bối "
+                    "cảnh, lực lượng tham gia và ý nghĩa lịch sử để học sinh đối "
+                    "chiếu từng phát biểu."
+                ),
+                explanation=(
+                    f"Câu tư liệu {index} được chấm theo số phát biểu đúng; bỏ "
+                    "trống một phát biểu được tính là sai."
+                ),
+                statements=statements,
+            )
+        )
+    return tuple(questions)
+
+
+def _demo_questions(topic_name: str) -> tuple[DemoQuestion, ...]:
+    return (*_multiple_choice_questions(topic_name), *_true_false_questions(topic_name))
+
+
 DEMO_EXAMS = (
     DemoExam(
         slug="tong-on-viet-nam-1945-1975",
         title="Tổng ôn Việt Nam 1945-1975",
-        summary="Bộ câu hỏi trọng tâm về kháng chiến, xây dựng miền Bắc và thống nhất đất nước.",
+        summary=(
+            "Bộ câu hỏi trọng tâm về kháng chiến, xây dựng miền Bắc và thống "
+            "nhất đất nước."
+        ),
         topic_slug="viet-nam-1945-1975",
         year=2026,
         difficulty="Trung bình",
         duration_minutes=50,
         status="published",
-        questions=(
-            DemoQuestion(
-                body="Sự kiện nào mở đầu cho thắng lợi của Cách mạng tháng Tám năm 1945?",
-                explanation="Câu này dùng để seed dữ liệu; lời giải không được lộ ở API chi tiết US-04.",
-                options=(
-                    ("Nhật đảo chính Pháp", False),
-                    ("Tổng khởi nghĩa giành chính quyền", True),
-                    ("Hiệp định Sơ bộ được ký kết", False),
-                    ("Chiến dịch Biên giới bắt đầu", False),
-                ),
-            ),
-            DemoQuestion(
-                body="Hiệp định Giơnevơ năm 1954 liên quan trực tiếp đến cuộc kháng chiến nào?",
-                explanation="Hiệp định Giơnevơ kết thúc cuộc kháng chiến chống Pháp ở Đông Dương.",
-                options=(
-                    ("Kháng chiến chống Pháp", True),
-                    ("Kháng chiến chống Mỹ", False),
-                    ("Chiến tranh bảo vệ biên giới", False),
-                    ("Phong trào Cần Vương", False),
-                ),
-            ),
-        ),
+        questions=_demo_questions("Việt Nam 1945-1975"),
     ),
     DemoExam(
         slug="de-luyen-chien-tranh-lanh",
         title="Đề luyện Chiến tranh lạnh",
-        summary="Ôn tập trật tự hai cực Ianta, các liên minh quân sự và xu thế hòa hoãn.",
+        summary=(
+            "Ôn tập trật tự hai cực Ianta, các liên minh quân sự và xu thế "
+            "hòa hoãn."
+        ),
         topic_slug="chien-tranh-lanh",
         year=2025,
         difficulty="Khó",
         duration_minutes=45,
         status="published",
-        questions=(
-            DemoQuestion(
-                body="Trật tự thế giới hai cực Ianta hình thành sau sự kiện nào?",
-                explanation="Trật tự hai cực Ianta được xác lập sau Hội nghị Ianta và sau Chiến tranh thế giới thứ hai.",
-                options=(
-                    ("Chiến tranh thế giới thứ nhất", False),
-                    ("Hội nghị Ianta năm 1945", True),
-                    ("Liên Xô tan rã", False),
-                    ("ASEAN thành lập", False),
-                ),
-            ),
-            DemoQuestion(
-                body="Một đặc điểm nổi bật của Chiến tranh lạnh là gì?",
-                explanation="Hai phe đối đầu căng thẳng nhưng không trực tiếp gây chiến tranh thế giới.",
-                options=(
-                    ("Đối đầu Đông-Tây kéo dài", True),
-                    ("Không có chạy đua vũ trang", False),
-                    ("Mọi nước đều trung lập", False),
-                    ("Liên hợp quốc bị giải thể", False),
-                ),
-            ),
-        ),
+        questions=_demo_questions("Chiến tranh lạnh"),
     ),
     DemoExam(
         slug="on-tap-dong-nam-a",
         title="Ôn tập Đông Nam Á sau 1945",
-        summary="Tập trung quá trình giành độc lập, thành lập ASEAN và hợp tác khu vực.",
+        summary=(
+            "Tập trung quá trình giành độc lập, thành lập ASEAN và hợp tác "
+            "khu vực."
+        ),
         topic_slug="dong-nam-a",
         year=2026,
         difficulty="Dễ",
         duration_minutes=35,
         status="published",
-        questions=(
-            DemoQuestion(
-                body="ASEAN được thành lập vào năm nào?",
-                explanation="ASEAN thành lập ngày 8/8/1967 tại Bangkok.",
-                options=(
-                    ("1955", False),
-                    ("1967", True),
-                    ("1975", False),
-                    ("1995", False),
-                ),
-            ),
-            DemoQuestion(
-                body="Việt Nam gia nhập ASEAN vào năm nào?",
-                explanation="Việt Nam trở thành thành viên ASEAN năm 1995.",
-                options=(
-                    ("1986", False),
-                    ("1991", False),
-                    ("1995", True),
-                    ("2000", False),
-                ),
-            ),
-        ),
+        questions=_demo_questions("Đông Nam Á sau 1945"),
     ),
     DemoExam(
         slug="de-nhanh-doi-moi-1986",
@@ -156,35 +191,21 @@ DEMO_EXAMS = (
         difficulty="Trung bình",
         duration_minutes=30,
         status="published",
-        questions=(
-            DemoQuestion(
-                body="Đường lối Đổi mới được đề ra tại Đại hội nào của Đảng?",
-                explanation="Đại hội VI năm 1986 đề ra đường lối Đổi mới.",
-                options=(
-                    ("Đại hội IV", False),
-                    ("Đại hội V", False),
-                    ("Đại hội VI", True),
-                    ("Đại hội VII", False),
-                ),
-            ),
-        ),
+        questions=_demo_questions("Việt Nam thời kỳ Đổi mới"),
     ),
     DemoExam(
         slug="nhap-dang-ra-soat",
         title="Bản nháp đang rà soát",
-        summary="Đề nháp dùng để chứng minh API public không trả nội dung chưa xuất bản.",
+        summary=(
+            "Đề nháp dùng để chứng minh API public không trả nội dung chưa "
+            "xuất bản."
+        ),
         topic_slug="lich-su-viet-nam",
         year=2026,
         difficulty="Dễ",
         duration_minutes=25,
         status="draft",
-        questions=(
-            DemoQuestion(
-                body="Câu hỏi nháp không được public.",
-                explanation="Nội dung nháp chỉ dành cho kiểm thử.",
-                options=(("Đáp án nháp", True), ("Nhiễu", False)),
-            ),
-        ),
+        questions=_demo_questions("Lịch sử Việt Nam"),
     ),
 )
 
@@ -216,6 +237,7 @@ def upsert_demo_exam(
     topic: Topic,
     published_at: datetime | None,
 ) -> None:
+    validate_demo_exam(demo_exam)
     exam = session.scalar(select(Exam).where(Exam.slug == demo_exam.slug))
     if exam is None:
         exam = Exam(slug=demo_exam.slug)
@@ -268,7 +290,35 @@ def upsert_demo_exam(
     else:
         link.is_primary = True
 
+    desired_positions = set(range(1, len(demo_exam.questions) + 1))
+    extra_questions = session.scalars(
+        select(Question).where(
+            Question.exam_version_id == version.id,
+            Question.position.not_in(desired_positions),
+        )
+    ).all()
+    extra_question_ids = [question.id for question in extra_questions]
+    if extra_question_ids:
+        session.execute(
+            delete(QuestionOption).where(
+                QuestionOption.question_id.in_(extra_question_ids)
+            )
+        )
+        session.execute(
+            delete(QuestionStatement).where(
+                QuestionStatement.question_id.in_(extra_question_ids)
+            )
+        )
+        session.execute(delete(Question).where(Question.id.in_(extra_question_ids)))
+
     for index, demo_question in enumerate(demo_exam.questions, start=1):
+        part_number = 1 if isinstance(demo_question, DemoMultipleChoiceQuestion) else 2
+        part_position = index if part_number == 1 else index - 24
+        question_type = (
+            "multiple_choice"
+            if isinstance(demo_question, DemoMultipleChoiceQuestion)
+            else "true_false_group"
+        )
         question = session.scalar(
             select(Question).where(
                 Question.exam_version_id == version.id,
@@ -279,33 +329,123 @@ def upsert_demo_exam(
             question = Question(
                 exam_version_id=version.id,
                 position=index,
+                part_number=part_number,
+                part_position=part_position,
+                question_type=question_type,
                 body=demo_question.body,
+                source_text=(
+                    demo_question.source_text
+                    if isinstance(demo_question, DemoTrueFalseQuestion)
+                    else None
+                ),
                 explanation=demo_question.explanation,
             )
             session.add(question)
             session.flush()
+        question.part_number = part_number
+        question.part_position = part_position
+        question.question_type = question_type
         question.body = demo_question.body
+        question.source_text = (
+            demo_question.source_text
+            if isinstance(demo_question, DemoTrueFalseQuestion)
+            else None
+        )
         question.explanation = demo_question.explanation
 
-        for option_index, (body, is_correct) in enumerate(
-            demo_question.options, start=1
-        ):
-            option = session.scalar(
-                select(QuestionOption).where(
-                    QuestionOption.question_id == question.id,
-                    QuestionOption.position == option_index,
+        if isinstance(demo_question, DemoMultipleChoiceQuestion):
+            session.execute(
+                delete(QuestionStatement).where(
+                    QuestionStatement.question_id == question.id
                 )
             )
-            if option is None:
-                option = QuestionOption(
+            for option_index, (body, is_correct) in enumerate(
+                demo_question.options, start=1
+            ):
+                option = session.scalar(
+                    select(QuestionOption).where(
+                        QuestionOption.question_id == question.id,
+                        QuestionOption.position == option_index,
+                    )
+                )
+                if option is None:
+                    option = QuestionOption(
+                        question_id=question.id,
+                        position=option_index,
+                        body=body,
+                        is_correct=is_correct,
+                    )
+                    session.add(option)
+                option.body = body
+                option.is_correct = is_correct
+            session.execute(
+                delete(QuestionOption).where(
+                    QuestionOption.question_id == question.id,
+                    QuestionOption.position > len(demo_question.options),
+                )
+            )
+            continue
+
+        session.execute(
+            delete(QuestionOption).where(QuestionOption.question_id == question.id)
+        )
+        for statement_index, (body, is_correct) in enumerate(
+            demo_question.statements,
+            start=1,
+        ):
+            statement = session.scalar(
+                select(QuestionStatement).where(
+                    QuestionStatement.question_id == question.id,
+                    QuestionStatement.position == statement_index,
+                )
+            )
+            if statement is None:
+                statement = QuestionStatement(
                     question_id=question.id,
-                    position=option_index,
+                    position=statement_index,
                     body=body,
                     is_correct=is_correct,
                 )
-                session.add(option)
-            option.body = body
-            option.is_correct = is_correct
+                session.add(statement)
+            statement.body = body
+            statement.is_correct = is_correct
+        session.execute(
+            delete(QuestionStatement).where(
+                QuestionStatement.question_id == question.id,
+                QuestionStatement.position > len(demo_question.statements),
+            )
+        )
+
+
+def validate_demo_exam(demo_exam: DemoExam) -> None:
+    mcq_questions = [
+        question
+        for question in demo_exam.questions
+        if isinstance(question, DemoMultipleChoiceQuestion)
+    ]
+    true_false_questions = [
+        question
+        for question in demo_exam.questions
+        if isinstance(question, DemoTrueFalseQuestion)
+    ]
+    if len(mcq_questions) != 24 or len(true_false_questions) != 4:
+        raise ValueError(
+            f"{demo_exam.slug} must have 24 MCQ and 4 true/false questions"
+        )
+    for question in mcq_questions:
+        if len(question.options) != 4:
+            raise ValueError(f"{demo_exam.slug} has an MCQ without 4 options")
+        if sum(1 for _, is_correct in question.options if is_correct) != 1:
+            raise ValueError(f"{demo_exam.slug} has an MCQ without exactly one answer")
+    for question in true_false_questions:
+        if not question.source_text.strip():
+            raise ValueError(
+                f"{demo_exam.slug} has a true/false question without source"
+            )
+        if len(question.statements) != 4:
+            raise ValueError(
+                f"{demo_exam.slug} has a true/false question without 4 statements"
+            )
 
 
 def seed_demo_exams() -> None:
