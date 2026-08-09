@@ -20,3 +20,4 @@ __pycache__/
 
 # Editor and operating system
 .DS_Store
+raw/*

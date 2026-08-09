@@ -325,6 +325,7 @@ class ExamVersion(Base):
             "exam_id",
             unique=True,
             postgresql_where=(status == "published"),
+            sqlite_where=(status == "published"),
         ),
         Index("ix_exam_versions_published_at", "status", "published_at"),
     )

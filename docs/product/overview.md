@@ -22,8 +22,8 @@ Bản phát hành đầu tiên gồm:
 - Lượt làm trắc nghiệm có thời gian, tự lưu, nộp bài, chấm tự động và lời giải
   theo từng câu.
 - Lịch sử làm bài cá nhân và làm lại không giới hạn.
-- Admin soạn đề, quản lý tài sản tương thích S3, nhập DOCX/PDF có lớp chữ đồng
-  bộ, rà soát và xuất bản.
+- Admin tải tài liệu nguồn lên storage tương thích S3, nhập DOCX/PDF có lớp chữ
+  đồng bộ, rà soát/xuất bản và có thể tạo draft thủ công khi cần.
 
 ## Ngoài phạm vi
 

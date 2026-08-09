@@ -136,6 +136,9 @@ class AttemptResultQuestion(BaseModel):
 
 class AttemptResultResponse(BaseModel):
     attempt_id: str
+    slug: str
+    title: str
+    attempt_number: int
     status: str
     score: float
     part1_score: float
@@ -146,7 +149,38 @@ class AttemptResultResponse(BaseModel):
     started_at: datetime
     submitted_at: datetime | None
     graded_at: datetime
+    can_retry: bool
     questions: list[AttemptResultQuestion]
+
+
+class HistoryAttemptSummary(BaseModel):
+    attempt_id: str
+    attempt_number: int
+    status: str
+    score: float
+    correct_count: int
+    incorrect_count: int
+    unanswered_count: int
+    submitted_at: datetime | None
+    graded_at: datetime
+
+
+class HistoryExamGroup(BaseModel):
+    slug: str
+    title: str
+    attempt_count: int
+    best_score: float
+    latest_score: float
+    latest_submitted_at: datetime | None
+    can_retry: bool
+    attempts: list[HistoryAttemptSummary]
+
+
+class AttemptHistoryPage(BaseModel):
+    items: list[HistoryExamGroup]
+    page: int
+    page_size: int
+    total: int
 
 
 def _now() -> datetime:
@@ -201,6 +235,23 @@ def _published_exam_version_for_slug(
         return None
     exam, version = row
     return exam, version
+
+
+def _has_published_version_for_exam(
+    session: Session,
+    exam_id: uuid.UUID,
+) -> bool:
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(ExamVersion)
+            .join(Exam, Exam.id == ExamVersion.exam_id)
+            .where(Exam.id == exam_id)
+            .where(Exam.deleted_at.is_(None))
+            .where(ExamVersion.status == "published")
+        )
+        or 0
+    ) > 0
 
 
 def _owned_attempt(
@@ -601,6 +652,14 @@ def _result_response(
     attempt: Attempt,
     result: AttemptResult,
 ) -> AttemptResultResponse:
+    row = session.execute(
+        select(Exam, ExamVersion)
+        .join(ExamVersion, ExamVersion.exam_id == Exam.id)
+        .where(ExamVersion.id == attempt.exam_version_id)
+    ).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    exam, version = row
     questions = _questions_for_version(session, attempt.exam_version_id)
     question_ids = [question.id for question in questions]
     options_by_question_id = _options_by_question_id(session, question_ids)
@@ -630,6 +689,9 @@ def _result_response(
 
     return AttemptResultResponse(
         attempt_id=str(attempt.id),
+        slug=exam.slug,
+        title=version.title,
+        attempt_number=attempt.attempt_number,
         status=attempt.status,
         score=_as_float(result.score),
         part1_score=_as_float(result.part1_score),
@@ -640,6 +702,7 @@ def _result_response(
         started_at=attempt.started_at,
         submitted_at=attempt.submitted_at,
         graded_at=result.graded_at,
+        can_retry=_has_published_version_for_exam(session, exam.id),
         questions=[
             AttemptResultQuestion(
                 id=str(question.id),
@@ -743,6 +806,78 @@ def start_or_resume_attempt(
         session.refresh(attempt)
 
     return _attempt_detail(session, current_user, attempt)
+
+
+@router.get("/attempts", response_model=AttemptHistoryPage)
+def list_attempt_history(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=12, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> AttemptHistoryPage:
+    completed_statuses = ("submitted", "expired_and_submitted")
+    rows = session.execute(
+        select(Attempt, AttemptResult, ExamVersion, Exam)
+        .join(AttemptResult, AttemptResult.attempt_id == Attempt.id)
+        .join(ExamVersion, ExamVersion.id == Attempt.exam_version_id)
+        .join(Exam, Exam.id == ExamVersion.exam_id)
+        .where(Attempt.user_id == current_user.id)
+        .where(Attempt.status.in_(completed_statuses))
+        .order_by(
+            Attempt.submitted_at.desc(),
+            AttemptResult.graded_at.desc(),
+        )
+    ).all()
+    grouped_attempts: dict[uuid.UUID, list[tuple[Attempt, AttemptResult]]] = {}
+    exams_by_id: dict[uuid.UUID, Exam] = {}
+    latest_versions_by_exam_id: dict[uuid.UUID, ExamVersion] = {}
+    for attempt, result, version, exam in rows:
+        if exam.id not in grouped_attempts:
+            grouped_attempts[exam.id] = []
+            exams_by_id[exam.id] = exam
+            latest_versions_by_exam_id[exam.id] = version
+        grouped_attempts[exam.id].append((attempt, result))
+
+    exam_ids = list(grouped_attempts)
+    paged_exam_ids = exam_ids[(page - 1) * page_size : page * page_size]
+    retry_by_exam_id = {
+        exam_id: _has_published_version_for_exam(session, exam_id)
+        for exam_id in paged_exam_ids
+    }
+    return AttemptHistoryPage(
+        items=[
+            HistoryExamGroup(
+                slug=exam.slug,
+                title=version.title,
+                attempt_count=len(attempts),
+                best_score=max(_as_float(result.score) for _, result in attempts),
+                latest_score=_as_float(attempts[0][1].score),
+                latest_submitted_at=attempts[0][0].submitted_at,
+                can_retry=retry_by_exam_id[exam_id],
+                attempts=[
+                    HistoryAttemptSummary(
+                        attempt_id=str(attempt.id),
+                        attempt_number=attempt.attempt_number,
+                        status=attempt.status,
+                        score=_as_float(result.score),
+                        correct_count=result.correct_count,
+                        incorrect_count=result.incorrect_count,
+                        unanswered_count=result.unanswered_count,
+                        submitted_at=attempt.submitted_at,
+                        graded_at=result.graded_at,
+                    )
+                    for attempt, result in attempts
+                ],
+            )
+            for exam_id in paged_exam_ids
+            for exam in [exams_by_id[exam_id]]
+            for version in [latest_versions_by_exam_id[exam_id]]
+            for attempts in [grouped_attempts[exam_id]]
+        ],
+        page=page,
+        page_size=page_size,
+        total=len(grouped_attempts),
+    )
 
 
 @router.get("/attempts/{attempt_id}", response_model=AttemptDetail)

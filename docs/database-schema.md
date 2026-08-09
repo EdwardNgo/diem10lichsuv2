@@ -266,6 +266,11 @@ Khóa chính ghép: `(attempt_id, statement_id)`. Service đảm bảo
 Kết quả được lưu một lần khi nộp/hết giờ; không chấm lại sau khi admin thay đổi
 version đề.
 
+Lịch sử học sinh đọc từ `attempts` đã hoàn thành, nối `attempt_results`,
+`exam_versions` gốc và `exams` để gom theo đề thi trước rồi mới hiển thị các
+lượt làm. Quyền làm lại được tính động từ phiên bản `published` hiện hành của
+cùng `exam`.
+
 ### `attempt_question_results`
 
 | Cột                                                        | Kiểu           | Ràng buộc                      |
@@ -283,6 +288,9 @@ Khóa chính ghép: `(attempt_id, question_id)`. Bảng này là snapshot breakd
 
 
 ### `assets`
+
+`source_document` có thể tồn tại độc lập sau upload để import hoặc retry import.
+`question_image` chỉ được dùng khi liên kết với câu hỏi trong editor bản nháp.
 
 
 | Cột                        | Kiểu           | Ràng buộc                           |
@@ -302,9 +310,11 @@ Khóa chính ghép: `(attempt_id, question_id)`. Bảng này là snapshot breakd
 
 ### `asset_links`
 
-Liên kết tài sản với `exam_versions` hoặc `questions`. Cần ràng buộc application
-để một hàng chỉ tham chiếu đúng một loại owner; tránh polymorphic FK không được
-PostgreSQL bảo vệ.
+Liên kết tài sản với `exam_versions` hoặc `questions` sau khi có draft/câu hỏi.
+Source document upload ban đầu chưa cần hàng `asset_links`; import thành công sẽ
+liên kết source asset với `exam_versions`. Cần ràng buộc application để một hàng
+chỉ tham chiếu đúng một loại owner; tránh polymorphic FK không được PostgreSQL
+bảo vệ.
 
 
 | Cột               | Kiểu                                |
@@ -320,14 +330,16 @@ PostgreSQL bảo vệ.
 ### `import_jobs` và `import_findings`
 
 
-| Bảng              | Cột cốt lõi                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `import_jobs`     | `id`, `source_asset_id`, `exam_version_id`, `status`, `requested_by_user_id`, `started_at`, `completed_at`, `error_code` |
-| `import_findings` | `id`, `import_job_id`, `severity`, `field_path`, `message`, `raw_value`, `resolved_at`, `resolved_by_user_id`            |
+| Bảng              | Cột cốt lõi                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `import_jobs`     | `id`, `source_asset_id`, `exam_version_id` nullable, `status`, `requested_by_user_id`, `started_at`, `completed_at`, `error_code` |
+| `import_findings` | `id`, `import_job_id`, `severity`, `field_path`, `message`, `raw_value`, `resolved_at`, `resolved_by_user_id`                     |
 
 
 Status import: `running`, `succeeded`, `failed`, `timed_out`. Output parser chỉ
-tạo/cập nhật draft; không có status tự publish.
+tạo/cập nhật draft; không có status tự publish. `exam_version_id` được gán khi
+parser tạo hoặc cập nhật draft an toàn; lỗi OCR, timeout hoặc parser không trích
+được dữ liệu an toàn giữ job ở trạng thái lỗi mà không tạo draft rỗng.
 
 ## Lộ trình migration
 

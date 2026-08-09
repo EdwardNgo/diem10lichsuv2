@@ -27,7 +27,8 @@ Trong phạm vi:
 - Google authentication, admin allowlist, session/RBAC và audit logging.
 - Khám phá đề, lượt làm, tự lưu, đồng hồ, chấm điểm, kết quả và lịch sử của học
   sinh.
-- Soạn đề, tài sản, import đồng bộ, rà soát và xuất bản của admin.
+- Tải tài liệu nguồn, import đồng bộ, rà soát/xuất bản và tạo draft thủ công của
+  admin.
 - Test và tài liệu vận hành chứng minh các story đã chấp nhận.
 
 Ngoài phạm vi:
@@ -41,7 +42,8 @@ Ngoài phạm vi:
 1. Scaffold topology repository và môi trường compose local.
 2. Thiết lập ranh giới persistence, migration, định danh, phân quyền và audit.
 3. Hoàn thành luồng làm bài của học sinh theo thứ tự story.
-4. Hoàn thành luồng quản trị nội dung và parser đồng bộ.
+4. Hoàn thành luồng quản trị nội dung theo thứ tự upload tài liệu nguồn, import
+   đồng bộ, rà soát/xuất bản và entry point thủ công dùng editor chung.
 5. Thêm bằng chứng focused, integration và end-to-end trước staging.
 
 ## Rủi ro và khôi phục
@@ -69,7 +71,11 @@ Ngoài phạm vi:
 - [ ] Triển khai US-04 đến US-09.
 - [x] Sửa vòng đời US-05/US-07 để lượt làm tạm dừng trên server khi học sinh
   rời bài và tiếp tục với đúng thời gian còn lại.
-- [ ] Triển khai US-10 đến US-13.
+- [x] Triển khai US-09: lịch sử gom theo đề thi, mở từng đề để xem các lượt làm
+  hoàn thành, xem lại snapshot kết quả và làm lại theo phiên bản đề đang xuất
+  bản.
+- [ ] Triển khai US-10 đến US-13: upload tài liệu nguồn, import thành draft, rà
+  soát/xuất bản và tạo draft thủ công bằng editor chung.
 - [ ] Hoàn thành validation và bằng chứng sẵn sàng staging.
 
 ## Quyết định
@@ -100,13 +106,21 @@ Ngoài phạm vi:
 - 2026-08-08: Đồng hồ lượt làm tạm dừng khi học sinh rời màn hình. Backend lưu
   `paused_at` và dời `expires_at` theo khoảng tạm dừng khi tiếp tục, nên client
   không thể tự sửa thời gian còn lại.
+- 2026-08-08: Lịch sử học sinh gom theo đề thi và chỉ hiển thị lượt `submitted`
+  hoặc `expired_and_submitted` của chính người dùng trong từng đề. Kết quả cũ
+  đọc từ version gốc; làm lại luôn tạo attempt theo version `published` hiện
+  hành nếu còn.
+- 2026-08-09: Luồng admin US-10 đến US-13 ưu tiên upload tài liệu nguồn, import
+  parser thành draft, rà soát/xuất bản bằng editor chung; soạn đề thủ công là
+  entry point cuối cùng tạo draft trống hoặc draft mới từ đề published.
 
 ## Validation
 
 - Bằng chứng focused: ánh xạ mọi acceptance criteria trong story packet đến test
   hoặc bằng chứng UAT khi nhóm triển khai hoàn thành.
 - Bằng chứng integration/end-to-end: chạy luồng học sinh và admin qua topology
-  Docker Compose.
+  Docker Compose, gồm upload/import/rà soát/publish và tạo draft thủ công dùng
+  chung editor.
 - Kiểm tra bắt buộc repository: định nghĩa format, lint, type-check, test,
   security scan và dependency audit khi scaffold tooling dự án.
 - Scaffold đã xác minh: `pnpm lint`, `pnpm build`, Ruff, Pyright, Pytest và
@@ -116,6 +130,10 @@ Ngoài phạm vi:
   image build sau chỉnh UI.
 - Tạm dừng/tiếp tục lượt làm đã xác minh bằng `ruff check .`, toàn bộ 20 test
   API, migration chain `alembic upgrade head`, cùng `pnpm lint` và `pnpm build`.
+- US-09 đã xác minh bằng test ownership/history/archive/current-version, toàn bộ
+  21 test API, migration chain `alembic upgrade head`, cùng `pnpm lint` và
+  `pnpm build`. Cập nhật lịch sử nhóm theo đề đã chạy lại `ruff check .`, toàn
+  bộ 21 test API, `pnpm lint` và `pnpm build`.
 
 ## Kết quả
 

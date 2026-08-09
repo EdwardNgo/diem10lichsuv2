@@ -67,18 +67,25 @@ def create_user(session: Session, token: str, email: str) -> User:
     return user
 
 
-def create_exam(session: Session, status: str = "published") -> dict[str, object]:
-    topic = Topic(slug="lich-su-viet-nam", name="Lịch sử Việt Nam")
-    session.add(topic)
-    session.flush()
-    exam = Exam(slug="de-thu")
+def create_exam(
+    session: Session,
+    status: str = "published",
+    slug: str = "de-thu",
+    title: str = "Đề thử",
+) -> dict[str, object]:
+    topic = session.scalar(select(Topic).where(Topic.slug == "lich-su-viet-nam"))
+    if topic is None:
+        topic = Topic(slug="lich-su-viet-nam", name="Lịch sử Việt Nam")
+        session.add(topic)
+        session.flush()
+    exam = Exam(slug=slug)
     session.add(exam)
     session.flush()
     version = ExamVersion(
         exam_id=exam.id,
         version_number=1,
         status=status,
-        title="Đề thử",
+        title=title,
         summary="Tóm tắt đề thử",
         year=2026,
         difficulty="Trung bình",
@@ -137,6 +144,7 @@ def create_exam(session: Session, status: str = "published") -> dict[str, object
     session.add_all([option_one, option_two, other_question_option])
     session.flush()
     return {
+        "exam": exam,
         "version": version,
         "question_one": question_one,
         "question_two": question_two,
@@ -191,6 +199,54 @@ def create_true_false_question(
     session.add_all(statements)
     session.flush()
     return {"question": question, "statements": statements}
+
+
+def create_second_published_version(
+    session: Session,
+    exam: Exam,
+    topic: Topic,
+) -> dict[str, object]:
+    version = ExamVersion(
+        exam_id=exam.id,
+        version_number=2,
+        status="published",
+        title="Đề thử bản mới",
+        summary="Tóm tắt đề thử mới",
+        year=2026,
+        difficulty="Trung bình",
+        duration_minutes=45,
+        published_at=datetime.now(UTC),
+    )
+    session.add(version)
+    session.flush()
+    session.add(
+        ExamVersionTopic(
+            exam_version_id=version.id,
+            topic_id=topic.id,
+            is_primary=True,
+        )
+    )
+    question = Question(
+        exam_version_id=version.id,
+        position=1,
+        part_number=1,
+        part_position=1,
+        question_type="multiple_choice",
+        body="Câu hỏi bản mới",
+        source_text=None,
+        explanation="Giải thích bản mới",
+    )
+    session.add(question)
+    session.flush()
+    option = QuestionOption(
+        question_id=question.id,
+        position=1,
+        body="Lựa chọn bản mới",
+        is_correct=True,
+    )
+    session.add(option)
+    session.flush()
+    return {"version": version, "question": question, "option": option}
 
 
 def test_start_attempt_is_idempotent_and_updates_completion_status(
@@ -511,5 +567,142 @@ def test_true_false_answers_submit_and_result_are_idempotent(tmp_path: Path) -> 
             )
             == 4
         )
+
+    app.dependency_overrides.clear()
+
+
+def test_attempt_history_is_owned_completed_and_retries_current_version(
+    tmp_path: Path,
+) -> None:
+    session_factory, engine = session_override(tmp_path)
+    token = "student-token"
+    other_token = "other-token"
+    with Session(engine) as session:
+        create_user(session, token, "student@example.com")
+        create_user(session, other_token, "other@example.com")
+        exam_data = create_exam(session)
+        second_exam_data = create_exam(
+            session,
+            slug="de-thu-hai",
+            title="Đề thử hai",
+        )
+        session.commit()
+        exam_id = exam_data["exam"].id
+        version_id = exam_data["version"].id
+        question_id = exam_data["question_one"].id
+        option_id = exam_data["option_one"].id
+        second_question_id = second_exam_data["question_one"].id
+        second_option_id = second_exam_data["option_one"].id
+
+    client = client_with_db(session_factory, token)
+    first_attempt = client.post("/v1/student/exams/de-thu/attempts").json()
+    first_attempt_id = first_attempt["id"]
+    assert (
+        client.put(
+            f"/v1/student/attempts/{first_attempt_id}/answers/{question_id}",
+            json={
+                "selected_option_id": str(option_id),
+                "is_marked_for_review": False,
+            },
+        ).status_code
+        == 200
+    )
+    first_result = client.post(
+        f"/v1/student/attempts/{first_attempt_id}/submit"
+    ).json()
+    assert first_result["title"] == "Đề thử"
+    assert first_result["attempt_number"] == 1
+    assert first_result["can_retry"] is True
+
+    second_attempt = client.post("/v1/student/exams/de-thu/attempts").json()
+    second_attempt_id = second_attempt["id"]
+    second_result = client.post(
+        f"/v1/student/attempts/{second_attempt_id}/submit"
+    ).json()
+    assert second_result["attempt_number"] == 2
+
+    newest_exam_attempt = client.post("/v1/student/exams/de-thu-hai/attempts").json()
+    assert (
+        client.put(
+            f"/v1/student/attempts/{newest_exam_attempt['id']}/answers/{second_question_id}",
+            json={
+                "selected_option_id": str(second_option_id),
+                "is_marked_for_review": False,
+            },
+        ).status_code
+        == 200
+    )
+    newest_exam_result = client.post(
+        f"/v1/student/attempts/{newest_exam_attempt['id']}/submit"
+    ).json()
+    assert newest_exam_result["title"] == "Đề thử hai"
+
+    open_attempt = client.post("/v1/student/exams/de-thu/attempts").json()
+    history_response = client.get("/v1/student/attempts")
+    assert history_response.status_code == 200
+    history = history_response.json()
+    assert history["total"] == 2
+    assert history["items"][0]["slug"] == "de-thu-hai"
+    exam_history = next(item for item in history["items"] if item["slug"] == "de-thu")
+    assert exam_history["attempt_count"] == 2
+    assert exam_history["best_score"] == first_result["score"]
+    assert exam_history["latest_score"] == second_result["score"]
+    assert exam_history["attempts"][0]["attempt_id"] == second_attempt_id
+    assert exam_history["attempts"][1]["attempt_id"] == first_attempt_id
+    assert open_attempt["id"] not in {
+        attempt["attempt_id"] for attempt in exam_history["attempts"]
+    }
+
+    other_client = client_with_db(session_factory, other_token)
+    assert (
+        other_client.get(
+            f"/v1/student/attempts/{first_attempt_id}/result"
+        ).status_code
+        == 404
+    )
+    other_history = other_client.get("/v1/student/attempts")
+    assert other_history.status_code == 200
+    assert other_history.json()["total"] == 0
+    other_client.close()
+    app.dependency_overrides.clear()
+
+    with Session(engine) as session:
+        attempt_model = session.get(Attempt, uuid.UUID(open_attempt["id"]))
+        assert attempt_model is not None
+        attempt_model.status = "abandoned"
+        version = session.get(ExamVersion, version_id)
+        assert version is not None
+        version.status = "archived"
+        session.commit()
+
+    archived_client = client_with_db(session_factory, token)
+    archived_history = archived_client.get("/v1/student/attempts").json()
+    archived_exam_history = next(
+        item for item in archived_history["items"] if item["slug"] == "de-thu"
+    )
+    assert archived_exam_history["can_retry"] is False
+    archived_result = archived_client.get(
+        f"/v1/student/attempts/{first_attempt_id}/result"
+    ).json()
+    assert archived_result["title"] == "Đề thử"
+    assert archived_result["can_retry"] is False
+    assert archived_client.post("/v1/student/exams/de-thu/attempts").status_code == 404
+    archived_client.close()
+    app.dependency_overrides.clear()
+
+    with Session(engine) as session:
+        exam = session.get(Exam, exam_id)
+        topic = session.scalar(select(Topic).where(Topic.slug == "lich-su-viet-nam"))
+        assert exam is not None
+        assert topic is not None
+        create_second_published_version(session, exam, topic)
+        session.commit()
+
+    retry_client = client_with_db(session_factory, token)
+    retry_attempt = retry_client.post("/v1/student/exams/de-thu/attempts")
+    assert retry_attempt.status_code == 200
+    assert retry_attempt.json()["title"] == "Đề thử bản mới"
+    assert retry_attempt.json()["id"] != first_attempt_id
+    retry_client.close()
 
     app.dependency_overrides.clear()

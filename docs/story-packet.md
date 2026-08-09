@@ -233,15 +233,20 @@ Là học sinh, tôi muốn theo dõi bài đã hoàn thành và làm lại đ�
 
 Tiêu chí chấp nhận:
 
-- Lịch sử chỉ có lượt hoàn thành của học sinh hiện tại, mới nhất trước.
+- Lịch sử chỉ có lượt hoàn thành của học sinh hiện tại, gom theo đề thi và sắp
+  xếp theo đề có lần làm mới nhất trước.
+- Khi chọn một đề trong lịch sử, hệ thống hiển thị các lượt làm hoàn thành của
+  đề đó, mới nhất trước.
 - Chi tiết lượt làm không đổi sau khi đề được sửa.
 - Làm lại tạo lượt mới theo phiên bản đã xuất bản hiện hành.
 
 Luồng thuận:
 
-1. Học sinh mở lịch sử; hệ thống trả các attempt hoàn thành mới nhất trước.
-2. Học sinh chọn một attempt để xem kết quả snapshot và lời giải.
-3. Học sinh bấm làm lại, xác nhận và bắt đầu attempt mới theo phiên bản hiện
+1. Học sinh mở lịch sử; hệ thống trả các đề đã có lượt làm hoàn thành, mới nhất
+   trước.
+2. Học sinh chọn một đề; UI mở danh sách các lượt làm hoàn thành của đề đó.
+3. Học sinh chọn một lượt làm để xem kết quả snapshot và lời giải.
+4. Học sinh bấm làm lại, xác nhận và bắt đầu attempt mới theo phiên bản hiện
    hành.
 
 Ngoại lệ:
@@ -252,84 +257,59 @@ Ngoại lệ:
 - URL attempt của người khác: trả `404` hoặc `403` mà không tiết lộ sự tồn tại
   hay nội dung.
 
-## US-10 — Soạn đề thủ công
+## US-10 — Tải tài liệu nguồn
 
-Là admin, tôi muốn tạo bản nháp đề tin cậy mà không cần nhập tệp.
-
-Tiêu chí chấp nhận:
-
-- Bản nháp hỗ trợ metadata bắt buộc, 24 câu ABCD Phần I, 4 câu tư liệu Phần II,
-  lựa chọn, phát biểu, đáp án đúng và lời giải.
-- Validation xuất bản yêu cầu đúng 24 câu Phần I có bốn lựa chọn và đúng một đáp
-  án đúng; đúng 4 câu Phần II có đoạn tư liệu và bốn phát biểu Đúng/Sai.
-- Admin có thể thêm, sửa, xóa mềm và sắp xếp câu hỏi/lựa chọn nháp.
-- Sửa nội dung đã xuất bản tạo phiên bản nháp mới.
-
-Luồng thuận:
-
-1. Admin tạo đề nháp, nhập metadata và thời lượng.
-2. Admin thêm câu ABCD, câu tư liệu, phát biểu Đúng/Sai, đáp án đúng, lời giải
-   và ảnh nếu cần.
-3. Admin lưu nháp, xem validation theo từng câu, chỉnh sửa đến khi hợp lệ.
-4. Với đề published, admin tạo phiên bản nháp mới rồi sửa trên phiên bản này.
-
-Ngoại lệ:
-
-- Lưu khi thiếu trường bắt buộc: trả validation theo trường, vẫn giữ dữ liệu đã
-  nhập trong form.
-- Một câu ABCD có không/multiple đáp án đúng hoặc câu tư liệu thiếu bốn phát
-  biểu Đúng/Sai: chặn publish và chỉ rõ câu lỗi.
-- Hai admin sửa cùng nháp: phát hiện version conflict và yêu cầu tải lại/giải
-  quyết thay đổi, không ghi đè im lặng.
-- Admin cố sửa trực tiếp phiên bản đã dùng cho attempt: backend từ chối và yêu
-  cầu tạo phiên bản nháp.
-
-## US-11 — Quản lý tài sản đề
-
-Là admin, tôi muốn đính kèm tệp nguồn và ảnh vào nội dung đề.
+Là admin, tôi muốn tải tài liệu đề gốc để hệ thống có thể nhập thành bản nháp.
 
 Tiêu chí chấp nhận:
 
-- Tải tệp nguồn nhận DOCX/PDF có lớp chữ; ảnh nhận JPEG, PNG và WebP.
+- Tải tài liệu nguồn nhận DOCX và PDF có lớp chữ.
 - Upload xác thực MIME type, phần mở rộng, kích thước và checksum.
-- Tệp nằm trong storage tương thích S3, chỉ metadata nằm trong PostgreSQL.
+- Tệp nằm trong storage tương thích R2, chỉ metadata nằm trong PostgreSQL.
 - Tài liệu nguồn chỉ dành cho admin.
+- Upload tài liệu nguồn không tạo bản nháp và không yêu cầu bản nháp có sẵn.
 
 Luồng thuận:
 
-1. Admin chọn tệp và yêu cầu upload.
+1. Admin chọn tài liệu nguồn và yêu cầu upload.
 2. Backend kiểm tra quyền/metadata, cấp presigned URL ngắn hạn.
 3. Client tải tệp lên object storage, xác nhận hoàn tất với backend.
-4. Backend lưu metadata/checksum và liên kết asset với bản nháp.
+4. Backend lưu metadata/checksum của source asset để admin có thể nhập hoặc
+   chạy lại import sau đó.
 
 Ngoại lệ:
 
-- MIME type, phần mở rộng hoặc checksum không hợp lệ: từ chối liên kết asset.
+- MIME type, phần mở rộng hoặc checksum không hợp lệ: từ chối hoàn tất asset.
 - Tệp vượt giới hạn: chặn trước upload nếu biết kích thước; nếu storage từ chối,
   hiển thị lỗi và không tạo asset hoàn chỉnh.
 - Presigned URL hết hạn: yêu cầu URL mới; không retry bằng URL cũ.
 - Học sinh yêu cầu source document: backend trả `403` và không phát presigned
   URL.
 
-## US-12 — Nhập bản nháp đồng bộ
+## US-11 — Nhập tài liệu thành bản nháp
 
 Là admin, tôi muốn parse tài liệu được hỗ trợ thành bản nháp có thể rà soát.
 
 Tiêu chí chấp nhận:
 
 - Chỉ admin gọi được import.
-- DOCX và PDF có lớp chữ hoạt động; PDF scan báo OCR chưa được hỗ trợ.
+- Import chạy từ source asset đã upload; DOCX và PDF có lớp chữ hoạt động; PDF
+  scan báo OCR chưa được hỗ trợ.
 - Đầu ra parser đánh dấu trường trích xuất mơ hồ là cảnh báo.
 - Tệp trên 20 MB hoặc xử lý quá 120 giây thất bại an toàn.
 - Import không bao giờ xuất bản đề.
+- Import thành công tạo hoặc cập nhật draft và liên kết source asset với draft
+  đó; import thất bại không tạo draft rỗng.
 
 Luồng thuận:
 
-1. Admin tải DOCX/PDF có lớp chữ lên và chọn “Nhập đề”.
+1. Admin chọn source asset đã upload và chọn “Nhập đề”.
 2. Backend kiểm tra quyền, loại tệp và kích thước, sau đó parser chạy trong
    request với timeout.
-3. Hệ thống tạo/cập nhật draft, lưu findings và trả màn hình rà soát.
-4. Admin chỉnh sửa mọi trường bị thiếu/cảnh báo trước khi yêu cầu xuất bản.
+3. Hệ thống tạo/cập nhật draft, liên kết source asset, lưu findings và trả màn
+   hình rà soát.
+4. Admin chuyển sang editor để sửa mọi trường bị thiếu/cảnh báo trước khi yêu
+   cầu xuất bản.
 
 Ngoại lệ:
 
@@ -341,36 +321,81 @@ Ngoại lệ:
 - Request bị retry: dùng import idempotency key hoặc nhận diện checksum để không
   tạo các draft trùng.
 
-## US-13 — Rà soát và xuất bản nội dung
+## US-12 — Rà soát, chỉnh sửa và xuất bản
 
-Là admin, tôi muốn sửa đầu ra parser trước khi học sinh nhìn thấy.
+Là admin, tôi muốn rà soát và chỉnh sửa bản nháp trước khi học sinh nhìn thấy.
 
 Tiêu chí chấp nhận:
 
-- Rà soát hiển thị nguồn, dữ liệu trích xuất và mọi cảnh báo parser.
-- Admin sửa được mọi trường có thể xuất bản.
+- Draft hỗ trợ metadata bắt buộc, 24 câu ABCD Phần I, 4 câu tư liệu Phần II,
+  lựa chọn, phát biểu, đáp án đúng, lời giải và ảnh.
+- Rà soát draft import hiển thị nguồn, dữ liệu trích xuất và mọi cảnh báo
+  parser; draft thủ công không cần nguồn parser.
+- Admin có thể thêm, sửa, xóa mềm và sắp xếp câu hỏi/lựa chọn/phát biểu nháp.
 - Lỗi xuất bản nêu rõ trường hoặc câu không hợp lệ.
+- Validation xuất bản yêu cầu đúng 24 câu Phần I có bốn lựa chọn và đúng một đáp
+  án đúng; đúng 4 câu Phần II có đoạn tư liệu và bốn phát biểu Đúng/Sai.
 - Phiên bản xuất bản có sẵn cho học sinh, lượt cũ giữ phiên bản gốc.
-- Import, publish, đổi đáp án đúng và archive được audit log.
+- Publish, đổi đáp án đúng, archive và gắn ảnh câu hỏi được audit log.
 
 Luồng thuận:
 
-1. Admin mở bản nháp, so sánh tệp nguồn với dữ liệu parser và warnings.
-2. Admin sửa metadata/câu hỏi/đáp án/lời giải, rồi yêu cầu validation.
+1. Admin mở bản nháp; nếu draft đến từ import, UI hiển thị tệp nguồn, dữ liệu
+   parser và warnings để đối chiếu.
+2. Admin sửa metadata/câu hỏi/đáp án/lời giải, sắp xếp nội dung và gắn ảnh nếu
+   cần, rồi yêu cầu validation.
 3. Khi validation đạt, admin bấm xuất bản.
 4. Backend tạo/đánh dấu phiên bản published, ghi audit log và công khai phiên bản
    mới cho lượt làm mới.
 
 Ngoại lệ:
 
+- Lưu khi thiếu trường bắt buộc: trả validation theo trường, vẫn giữ dữ liệu đã
+  nhập trong form.
+- Một câu ABCD có không/multiple đáp án đúng hoặc câu tư liệu thiếu bốn phát
+  biểu Đúng/Sai: chặn publish và chỉ rõ câu lỗi.
 - Còn warning hoặc lỗi validation bắt buộc: chặn publish, điều hướng đến trường
   hoặc câu lỗi; warning không bắt buộc cần được admin xác nhận rõ.
+- Hai admin sửa cùng nháp: phát hiện version conflict và yêu cầu tải lại/giải
+  quyết thay đổi, không ghi đè im lặng.
 - Hai admin publish đồng thời: chỉ một phiên bản thắng theo optimistic lock;
   yêu cầu còn lại nhận conflict và tải lại.
+- Admin cố sửa trực tiếp phiên bản đã dùng cho attempt: backend từ chối và yêu
+  cầu tạo phiên bản nháp.
 - Publish thành công nhưng cache danh sách chưa cập nhật: cache phải được
   invalidate trước khi phản hồi thành công.
 - Lỗi giữa publish: transaction rollback, phiên bản cũ vẫn published và audit
   log ghi sự cố.
+
+## US-13 — Soạn đề thủ công
+
+Là admin, tôi muốn tạo bản nháp đề tin cậy khi không có tài liệu nguồn.
+
+Tiêu chí chấp nhận:
+
+- Admin có thể tạo draft trống bằng metadata tối thiểu hoặc từ một đề published
+  hiện có.
+- Draft thủ công dùng cùng editor, validation, optimistic lock, versioning,
+  audit và publish contract với draft nhập từ parser.
+- Draft thủ công không yêu cầu source asset hoặc import findings.
+- Sửa nội dung đã xuất bản tạo phiên bản nháp mới, không sửa phiên bản đã có lượt
+  làm.
+
+Luồng thuận:
+
+1. Admin chọn tạo đề thủ công hoặc tạo bản nháp mới từ đề published.
+2. Hệ thống tạo draft trống hoặc sao chép nội dung hiện hành sang phiên bản nháp.
+3. Admin nhập/sửa nội dung bằng editor chung của US-12.
+4. Admin validation và xuất bản qua cùng luồng rà soát/xuất bản.
+
+Ngoại lệ:
+
+- Admin bỏ dở draft trống: draft vẫn ở trạng thái nháp và không xuất hiện cho học
+  sinh.
+- Tạo draft từ đề không còn quyền chỉnh sửa hoặc đã bị archive: backend từ chối
+  và không tạo phiên bản mới.
+- Hai admin cùng tạo draft kế tiếp từ một đề published: backend chỉ cho phép một
+  draft chỉnh sửa hiện hành hoặc trả conflict để admin mở draft đang có.
 
 ## Kỳ vọng bằng chứng
 
@@ -379,4 +404,5 @@ Ngoại lệ:
 - Integration test chứng minh persistence API, vòng đời session, truy cập storage
   và giới hạn import đồng bộ.
 - End-to-end test chứng minh luồng Google login, làm bài có thời gian,
-  refresh/tiếp tục, nộp/kết quả/lịch sử và admin import/rà soát/publish.
+  refresh/tiếp tục, nộp/kết quả/lịch sử, admin upload/import/rà soát/publish và
+  tạo draft thủ công bằng editor chung.

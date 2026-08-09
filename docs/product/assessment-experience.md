@@ -78,6 +78,13 @@ từng câu và lời giải.
 ví dụ `3.1` và `10`. Trong phần xem lại, đáp án đúng dùng dấu tích xanh và lựa
 chọn sai của học sinh dùng dấu X đỏ thay cho nhãn chữ lặp lại.
 
-Học sinh có thể làm lại không giới hạn. Mỗi lần làm lại tạo lượt làm mới theo
-phiên bản đề đã xuất bản hiện hành. Kết quả có sẵn gắn với phiên bản gốc và không
-bao giờ được chấm lại sau khi admin sửa câu hỏi.
+Lịch sử làm bài chỉ hiển thị các lượt đã nộp hoặc đã hết giờ của học sinh hiện
+tại, gom theo từng đề thi. Danh sách đề được sắp theo lần làm mới nhất; khi chọn
+một đề, học sinh xem các lượt làm hoàn thành của đề đó, mới nhất trước. Mở một
+lượt trong lịch sử luôn xem lại kết quả, đáp án và lời giải theo phiên bản đề
+gốc của lượt đó.
+
+Học sinh có thể làm lại không giới hạn khi đề còn phiên bản xuất bản hiện hành.
+Mỗi lần làm lại tạo lượt làm mới theo phiên bản đang xuất bản. Kết quả có sẵn
+gắn với phiên bản gốc và không bao giờ được chấm lại sau khi admin sửa hoặc
+archive câu hỏi.
