@@ -384,9 +384,7 @@ def test_pause_attempt_preserves_remaining_time_until_resume(tmp_path: Path) -> 
     resumed_server_now = datetime.fromisoformat(resumed["server_now"])
     if resumed_server_now.tzinfo is None:
         resumed_server_now = resumed_server_now.replace(tzinfo=UTC)
-    resumed_remaining = int(
-        (resumed_expires_at - resumed_server_now).total_seconds()
-    )
+    resumed_remaining = int((resumed_expires_at - resumed_server_now).total_seconds())
     assert abs(resumed_remaining - remaining_seconds) <= 1
 
     with Session(engine) as session:
@@ -488,9 +486,7 @@ def test_true_false_answers_submit_and_result_are_idempotent(tmp_path: Path) -> 
         mcq_question_id = exam_data["question_one"].id
         mcq_option_id = exam_data["option_one"].id
         true_false_question_id = true_false_data["question"].id
-        statement_ids = [
-            statement.id for statement in true_false_data["statements"]
-        ]
+        statement_ids = [statement.id for statement in true_false_data["statements"]]
 
     client = client_with_db(session_factory, token)
     attempt = client.post("/v1/student/exams/de-thu/attempts").json()
@@ -607,9 +603,7 @@ def test_attempt_history_is_owned_completed_and_retries_current_version(
         ).status_code
         == 200
     )
-    first_result = client.post(
-        f"/v1/student/attempts/{first_attempt_id}/submit"
-    ).json()
+    first_result = client.post(f"/v1/student/attempts/{first_attempt_id}/submit").json()
     assert first_result["title"] == "Đề thử"
     assert first_result["attempt_number"] == 1
     assert first_result["can_retry"] is True
@@ -655,9 +649,7 @@ def test_attempt_history_is_owned_completed_and_retries_current_version(
 
     other_client = client_with_db(session_factory, other_token)
     assert (
-        other_client.get(
-            f"/v1/student/attempts/{first_attempt_id}/result"
-        ).status_code
+        other_client.get(f"/v1/student/attempts/{first_attempt_id}/result").status_code
         == 404
     )
     other_history = other_client.get("/v1/student/attempts")

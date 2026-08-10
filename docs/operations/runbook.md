@@ -164,6 +164,29 @@ thể, backup đã kiểm chứng và hiểu rõ tác động dữ liệu.
 5. Nếu migration đã thay đổi một phần dữ liệu, dùng backup/snapshot hoặc migration
    sửa lỗi có kiểm soát.
 
+## Logging Backend
+
+API dùng `structlog` và middleware log request/response đầy đủ (trừ `/healthz`).
+
+Biến môi trường:
+
+- `LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR` (mặc định `INFO`).
+- `LOG_JSON`: `true` để xuất JSON cho production/log aggregator.
+- `LOG_REQUEST_BODY`: `true`/`false` — log body request (mặc định `true`).
+- `LOG_RESPONSE_BODY`: `true`/`false` — log body response (mặc định `true`).
+- `LOG_MAX_BODY_BYTES`: giới hạn bytes body log (mặc định `65536`).
+
+Header nhạy cảm (`cookie`, `authorization`) được redact. Mỗi request có
+`x-request-id` trong response để trace log.
+
+Cấu trúc code backend:
+
+- `controllers/`: route HTTP mỏng.
+- `services/`: business logic.
+- `repositories/`: truy cập database.
+- `models/`: SQLAlchemy entities.
+- `schemas/`: Pydantic request/response DTO.
+
 ## Validation Checklist
 
 Sau mỗi change có migration:

@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -79,6 +80,31 @@ class AuditLog(Base):
             "target_type",
             "target_id",
             "created_at",
+        ),
+    )
+
+
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    object_key: Mapped[str] = mapped_column(Text, unique=True)
+    bucket: Mapped[str] = mapped_column(String(255))
+    mime_type: Mapped[str] = mapped_column(String(255))
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    asset_kind: Mapped[str] = mapped_column(String(30), index=True)
+    uploaded_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint("size_bytes > 0", name="assets_size_bytes_check"),
+        CheckConstraint(
+            "asset_kind IN ('source_document', 'question_image')",
+            name="assets_kind_check",
         ),
     )
 

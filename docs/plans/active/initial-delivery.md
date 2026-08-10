@@ -74,6 +74,9 @@ Ngoài phạm vi:
 - [x] Triển khai US-09: lịch sử gom theo đề thi, mở từng đề để xem các lượt làm
   hoàn thành, xem lại snapshot kết quả và làm lại theo phiên bản đề đang xuất
   bản.
+- [x] Triển khai US-10: admin lấy presigned URL R2 cho DOCX/PDF nguồn, upload
+  trực tiếp lên storage và confirm metadata/checksum thành `source_document`
+  asset riêng tư mà chưa tạo draft.
 - [ ] Triển khai US-10 đến US-13: upload tài liệu nguồn, import thành draft, rà
   soát/xuất bản và tạo draft thủ công bằng editor chung.
 - [ ] Hoàn thành validation và bằng chứng sẵn sàng staging.
@@ -134,6 +137,10 @@ Ngoài phạm vi:
   21 test API, migration chain `alembic upgrade head`, cùng `pnpm lint` và
   `pnpm build`. Cập nhật lịch sử nhóm theo đề đã chạy lại `ruff check .`, toàn
   bộ 21 test API, `pnpm lint` và `pnpm build`.
+- US-10 đã xác minh bằng test admin upload URL/confirm/permission/validation,
+  toàn bộ 24 test API, `ruff check .`, migration chain `alembic upgrade head`,
+  `pnpm lint` và `pnpm build`. `pyright` bị treo không có output trong hơn 4
+  phút ở môi trường local nên đã dừng và chưa có kết quả type-check mới.
 
 ## Kết quả
 

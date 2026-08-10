@@ -322,9 +322,7 @@ def test_seed_demo_exams_is_idempotent(tmp_path: Path) -> None:
         )
         assert session.scalar(select(func.count()).select_from(Question)) == 140
         assert session.scalar(select(func.count()).select_from(QuestionOption)) == 480
-        assert (
-            session.scalar(select(func.count()).select_from(QuestionStatement)) == 80
-        )
+        assert session.scalar(select(func.count()).select_from(QuestionStatement)) == 80
         published_version = session.scalar(
             select(ExamVersion).where(ExamVersion.status == "published")
         )

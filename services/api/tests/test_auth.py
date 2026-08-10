@@ -70,8 +70,14 @@ def test_google_callback_creates_user_session_and_logout(
             "iss": "https://accounts.google.com",
         }
 
-    monkeypatch.setattr(auth, "exchange_google_code", fake_exchange)
-    monkeypatch.setattr(auth, "verify_google_id_token", fake_verify)
+    monkeypatch.setattr(
+        "diem10_api.services.auth_service.exchange_google_code",
+        fake_exchange,
+    )
+    monkeypatch.setattr(
+        "diem10_api.services.auth_service.verify_google_id_token",
+        fake_verify,
+    )
     app.dependency_overrides[get_session] = override_session
     client = TestClient(app)
 

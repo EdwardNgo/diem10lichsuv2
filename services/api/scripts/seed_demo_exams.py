@@ -117,8 +117,7 @@ def _true_false_questions(topic_name: str) -> tuple[DemoTrueFalseQuestion, ...]:
         questions.append(
             DemoTrueFalseQuestion(
                 body=(
-                    f"Đọc tư liệu {index} và xác định tính đúng sai của các "
-                    "phát biểu."
+                    f"Đọc tư liệu {index} và xác định tính đúng sai của các phát biểu."
                 ),
                 source_text=(
                     f"Tư liệu {index}: Nội dung tóm lược về {topic_name}, nêu bối "
@@ -158,8 +157,7 @@ DEMO_EXAMS = (
         slug="de-luyen-chien-tranh-lanh",
         title="Đề luyện Chiến tranh lạnh",
         summary=(
-            "Ôn tập trật tự hai cực Ianta, các liên minh quân sự và xu thế "
-            "hòa hoãn."
+            "Ôn tập trật tự hai cực Ianta, các liên minh quân sự và xu thế hòa hoãn."
         ),
         topic_slug="chien-tranh-lanh",
         year=2025,
@@ -172,8 +170,7 @@ DEMO_EXAMS = (
         slug="on-tap-dong-nam-a",
         title="Ôn tập Đông Nam Á sau 1945",
         summary=(
-            "Tập trung quá trình giành độc lập, thành lập ASEAN và hợp tác "
-            "khu vực."
+            "Tập trung quá trình giành độc lập, thành lập ASEAN và hợp tác khu vực."
         ),
         topic_slug="dong-nam-a",
         year=2026,
@@ -197,8 +194,7 @@ DEMO_EXAMS = (
         slug="nhap-dang-ra-soat",
         title="Bản nháp đang rà soát",
         summary=(
-            "Đề nháp dùng để chứng minh API public không trả nội dung chưa "
-            "xuất bản."
+            "Đề nháp dùng để chứng minh API public không trả nội dung chưa xuất bản."
         ),
         topic_slug="lich-su-viet-nam",
         year=2026,
