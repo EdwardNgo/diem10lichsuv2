@@ -1,6 +1,7 @@
 from diem10_api.models.entities import (
     AdminAllowlist,
     Asset,
+    AssetLink,
     Attempt,
     AttemptAnswer,
     AttemptQuestionResult,
@@ -11,6 +12,8 @@ from diem10_api.models.entities import (
     Exam,
     ExamVersion,
     ExamVersionTopic,
+    ImportFinding,
+    ImportJob,
     OAuthState,
     Question,
     QuestionOption,
@@ -23,6 +26,7 @@ from diem10_api.models.entities import (
 __all__ = [
     "AdminAllowlist",
     "Asset",
+    "AssetLink",
     "Attempt",
     "AttemptAnswer",
     "AttemptQuestionResult",
@@ -33,6 +37,8 @@ __all__ = [
     "Exam",
     "ExamVersion",
     "ExamVersionTopic",
+    "ImportFinding",
+    "ImportJob",
     "OAuthState",
     "Question",
     "QuestionOption",

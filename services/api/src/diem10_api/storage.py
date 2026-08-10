@@ -121,3 +121,21 @@ def create_presigned_source_upload(
         "Content-Type": mime_type,
         "x-amz-checksum-sha256": checksum_header,
     }
+
+
+def download_object(
+    object_key: str,
+    bucket: str,
+    settings: R2Settings,
+) -> bytes:
+    boto3: Any = importlib.import_module("boto3")
+    client = boto3.client(
+        "s3",
+        aws_access_key_id=settings.access_key_id,
+        aws_secret_access_key=settings.secret_access_key,
+        endpoint_url=settings.endpoint_url,
+        region_name="auto",
+    )
+    response = client.get_object(Bucket=bucket, Key=object_key)
+    body: bytes = response["Body"].read()
+    return body

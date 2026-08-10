@@ -448,3 +448,83 @@ class QuestionStatement(Base):
             "uq_question_statements_position", "question_id", "position", unique=True
         ),
     )
+
+
+class AssetLink(Base):
+    __tablename__ = "asset_links"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), index=True)
+    exam_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("exam_versions.id"), index=True
+    )
+    question_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("questions.id"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(30))
+
+    __table_args__ = (
+        CheckConstraint(
+            "(exam_version_id IS NOT NULL AND question_id IS NULL) OR "
+            "(exam_version_id IS NULL AND question_id IS NOT NULL)",
+            name="asset_links_owner_check",
+        ),
+        Index(
+            "uq_asset_links_source_exam",
+            "asset_id",
+            "exam_version_id",
+            unique=True,
+            postgresql_where=(purpose == "source_document"),
+            sqlite_where=(purpose == "source_document"),
+        ),
+    )
+
+
+class ImportJob(Base):
+    __tablename__ = "import_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    source_asset_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("assets.id"), index=True
+    )
+    exam_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("exam_versions.id"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    error_code: Mapped[str | None] = mapped_column(String(50))
+    idempotency_key: Mapped[str | None] = mapped_column(String(128))
+    requested_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('running', 'succeeded', 'failed', 'timed_out')",
+            name="import_jobs_status_check",
+        ),
+        Index("ix_import_jobs_source_idempotency", "source_asset_id", "idempotency_key"),
+    )
+
+
+class ImportFinding(Base):
+    __tablename__ = "import_findings"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    import_job_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("import_jobs.id"), index=True
+    )
+    severity: Mapped[str] = mapped_column(String(20))
+    field_path: Mapped[str] = mapped_column(String(255))
+    message: Mapped[str] = mapped_column(Text)
+    raw_value: Mapped[str | None] = mapped_column(Text)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id")
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "severity IN ('warning', 'error')",
+            name="import_findings_severity_check",
+        ),
+    )

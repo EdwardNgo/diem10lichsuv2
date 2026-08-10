@@ -68,3 +68,34 @@ class AssetResponse(BaseModel):
     asset_kind: str
     uploaded_by_user_id: str
     created_at: datetime
+
+
+class SourceDocumentPage(BaseModel):
+    items: list[AssetResponse]
+
+
+class ImportRequest(BaseModel):
+    idempotency_key: str | None = Field(default=None, max_length=128)
+
+
+class ImportFindingResponse(BaseModel):
+    severity: str
+    field_path: str
+    message: str
+    raw_value: str | None = None
+
+
+class ImportSummary(BaseModel):
+    part1_count: int
+    part2_count: int
+    warnings: int
+    errors: int
+
+
+class ImportJobResponse(BaseModel):
+    import_job_id: str
+    exam_version_id: str | None
+    status: str
+    error_code: str | None = None
+    findings: list[ImportFindingResponse]
+    summary: ImportSummary

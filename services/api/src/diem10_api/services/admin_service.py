@@ -7,12 +7,14 @@ from sqlalchemy.orm import Session
 from diem10_api.core.logging import get_logger
 from diem10_api.models import AdminAllowlist, Asset, AuditLog, User
 from diem10_api.repositories.admin_repository import AdminRepository
+from diem10_api.repositories.import_repository import ImportRepository
 from diem10_api.schemas.admin import (
     AllowlistEntry,
     AllowlistGrantRequest,
     AllowlistPage,
     AssetResponse,
     SourceDocumentConfirmRequest,
+    SourceDocumentPage,
     SourceDocumentUploadRequest,
     SourceDocumentUploadUrl,
 )
@@ -185,6 +187,12 @@ class AdminService:
             uploaded_by=str(actor.id),
         )
         return self._asset_response(saved)
+
+    def list_source_documents(self) -> SourceDocumentPage:
+        assets = ImportRepository(self._session).list_source_documents()
+        return SourceDocumentPage(
+            items=[self._asset_response(asset) for asset in assets]
+        )
 
     def list_allowlist(self) -> AllowlistPage:
         entries = self._repo.list_allowlist()

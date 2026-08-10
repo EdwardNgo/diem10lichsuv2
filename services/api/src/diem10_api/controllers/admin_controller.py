@@ -12,11 +12,15 @@ from diem10_api.schemas.admin import (
     AllowlistGrantRequest,
     AllowlistPage,
     AssetResponse,
+    ImportJobResponse,
+    ImportRequest,
     SourceDocumentConfirmRequest,
+    SourceDocumentPage,
     SourceDocumentUploadRequest,
     SourceDocumentUploadUrl,
 )
 from diem10_api.services.admin_service import AdminService
+from diem10_api.services.import_service import ImportService
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -55,6 +59,33 @@ def confirm_source_document_upload(
     session: Session = Depends(get_session),
 ) -> AssetResponse:
     return AdminService(session).confirm_source_document_upload(payload, actor)
+
+
+@router.get("/assets/source-documents", response_model=SourceDocumentPage)
+def list_source_documents(
+    _: User = Depends(require_admin),
+    session: Session = Depends(get_session),
+) -> SourceDocumentPage:
+    return AdminService(session).list_source_documents()
+
+
+@router.post(
+    "/assets/{asset_id}/import",
+    response_model=ImportJobResponse,
+)
+def import_source_document(
+    asset_id: uuid.UUID,
+    request: Request,
+    actor: User = Depends(require_admin),
+    session: Session = Depends(get_session),
+    payload: ImportRequest | None = None,
+) -> ImportJobResponse:
+    return ImportService(session).import_source_document(
+        asset_id,
+        actor,
+        payload.idempotency_key if payload is not None else None,
+        _client_ip(request),
+    )
 
 
 @router.get("/allowlist", response_model=AllowlistPage)

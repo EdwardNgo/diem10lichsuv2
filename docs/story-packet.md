@@ -356,6 +356,7 @@ Ngoại lệ:
   biểu Đúng/Sai: chặn publish và chỉ rõ câu lỗi.
 - Còn warning hoặc lỗi validation bắt buộc: chặn publish, điều hướng đến trường
   hoặc câu lỗi; warning không bắt buộc cần được admin xác nhận rõ.
+  Chỉ cần có đáp án là được, lời giải là tuỳ chọn
 - Hai admin sửa cùng nháp: phát hiện version conflict và yêu cầu tải lại/giải
   quyết thay đổi, không ghi đè im lặng.
 - Hai admin publish đồng thời: chỉ một phiên bản thắng theo optimistic lock;

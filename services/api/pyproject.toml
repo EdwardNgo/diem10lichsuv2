@@ -16,6 +16,7 @@ structlog = "*"
 httpx = "^0.28.1"
 pyjwt = {extras = ["crypto"], version = "^2.13.0"}
 boto3 = "^1.43.67"
+pypdf = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

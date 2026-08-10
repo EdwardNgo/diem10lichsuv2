@@ -77,8 +77,10 @@ Ngoài phạm vi:
 - [x] Triển khai US-10: admin lấy presigned URL R2 cho DOCX/PDF nguồn, upload
   trực tiếp lên storage và confirm metadata/checksum thành `source_document`
   asset riêng tư mà chưa tạo draft.
-- [ ] Triển khai US-10 đến US-13: upload tài liệu nguồn, import thành draft, rà
-  soát/xuất bản và tạo draft thủ công bằng editor chung.
+- [x] Triển khai US-11: parser manual-exams + import draft — chi tiết tại
+  `docs/plans/completed/us-11-manual-exam-parser.md`.
+- [ ] Triển khai US-12 đến US-13: rà soát/xuất bản và tạo draft thủ công bằng
+  editor chung.
 - [ ] Hoàn thành validation và bằng chứng sẵn sàng staging.
 
 ## Quyết định
@@ -116,6 +118,8 @@ Ngoài phạm vi:
 - 2026-08-09: Luồng admin US-10 đến US-13 ưu tiên upload tài liệu nguồn, import
   parser thành draft, rà soát/xuất bản bằng editor chung; soạn đề thủ công là
   entry point cuối cùng tạo draft trống hoặc draft mới từ đề published.
+- 2026-08-10: Parser v1 chỉ nhắm định dạng admin `manual-exams/` (mẫu `ĐỀ SỐ
+  1.docx`); không parse corpus `parser-source/raw/` ở bản đầu.
 
 ## Validation
 
@@ -141,6 +145,9 @@ Ngoài phạm vi:
   toàn bộ 24 test API, `ruff check .`, migration chain `alembic upgrade head`,
   `pnpm lint` và `pnpm build`. `pyright` bị treo không có output trong hơn 4
   phút ở môi trường local nên đã dừng và chưa có kết quả type-check mới.
+- US-11 đã xác minh bằng parser fixture `ĐỀ SỐ 1.docx`, test import admin
+  (draft 28 câu, idempotency, OCR reject, student 403), toàn bộ 30 test API,
+  `ruff check .`, `pnpm lint`.
 
 ## Kết quả
 
