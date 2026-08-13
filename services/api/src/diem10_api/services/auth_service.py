@@ -243,7 +243,7 @@ class AuthService:
         error: str | None,
         settings: AuthSettings,
     ) -> RedirectResponse:
-        fallback = "/dashboard"
+        fallback = "/exams"
         if state is None:
             logger.warning("auth.google.callback.invalid_state", reason="missing_state")
             return RedirectResponse(
@@ -293,7 +293,11 @@ class AuthService:
 
         subject = _claim_string(claims, "sub")
         email = _claim_string(claims, "email")
-        if subject is None or email is None:
+        if (
+            subject is None
+            or email is None
+            or claims.get("email_verified") is not True
+        ):
             return RedirectResponse(
                 _append_auth_error(return_to, "invalid_profile"), status_code=303
             )
@@ -301,6 +305,7 @@ class AuthService:
         email = normalize_email(email)
         display_name = _claim_string(claims, "name") or email
         avatar_url = _claim_string(claims, "picture")
+        login_time = _now()
         user = self._repo.get_user_by_google_subject(subject)
         if user is None:
             user = User(
@@ -308,12 +313,14 @@ class AuthService:
                 email=email,
                 display_name=display_name,
                 avatar_url=avatar_url,
+                last_login_at=login_time,
             )
             self._repo.add_user(user)
         else:
             user.email = email
             user.display_name = display_name
             user.avatar_url = avatar_url
+            user.last_login_at = login_time
 
         try:
             self._repo.flush()
@@ -324,7 +331,7 @@ class AuthService:
             )
 
         session_token = secrets.token_urlsafe(48)
-        expires_at = _now() + timedelta(seconds=settings.session_ttl_seconds)
+        expires_at = login_time + timedelta(seconds=settings.session_ttl_seconds)
         user_session = UserSession(
             user_id=user.id,
             token_hash=hash_token(session_token),
@@ -369,7 +376,13 @@ class AuthService:
                 self._repo.commit()
                 logger.info("auth.logout", user_id=str(user_session.user_id))
 
-        response.delete_cookie(settings.session_cookie_name, path="/")
+        response.delete_cookie(
+            settings.session_cookie_name,
+            httponly=True,
+            secure=settings.cookie_secure,
+            samesite="lax",
+            path="/",
+        )
         return {"ok": True}
 
     def me(self, user: User) -> AuthMe:

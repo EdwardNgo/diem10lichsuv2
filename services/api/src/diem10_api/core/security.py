@@ -10,7 +10,7 @@ def hash_token(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def safe_return_path(value: str | None, fallback: str = "/dashboard") -> str:
+def safe_return_path(value: str | None, fallback: str = "/exams") -> str:
     if value is None:
         return fallback
 
