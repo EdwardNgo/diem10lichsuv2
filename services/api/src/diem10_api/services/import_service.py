@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from diem10_api.core.logging import get_logger
+from diem10_api.core.option_labels import mc_position_from_label, tf_position_from_label
 from diem10_api.models import (
     Asset,
     AssetLink,
@@ -299,11 +300,11 @@ class ImportService:
                 explanation=mc_question.explanation,
             )
             self._repo.add_question(question)
-            for option_index, option in enumerate(mc_question.options, start=1):
+            for option in mc_question.options:
                 self._repo.add_option(
                     QuestionOption(
                         question_id=question.id,
-                        position=option_index,
+                        position=mc_position_from_label(option.label),
                         body=option.body,
                         is_correct=option.is_correct,
                     )
@@ -322,13 +323,11 @@ class ImportService:
                 explanation=tf_question.explanation,
             )
             self._repo.add_question(question)
-            for statement_index, statement in enumerate(
-                tf_question.statements, start=1
-            ):
+            for statement in tf_question.statements:
                 self._repo.add_statement(
                     QuestionStatement(
                         question_id=question.id,
-                        position=statement_index,
+                        position=tf_position_from_label(statement.label),
                         body=statement.body,
                         is_correct=bool(statement.is_correct),
                     )

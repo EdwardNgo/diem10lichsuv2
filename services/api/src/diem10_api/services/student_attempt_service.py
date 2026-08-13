@@ -6,6 +6,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from diem10_api.core.option_labels import (
+    mc_label_from_position,
+    tf_label_from_position,
+)
 from diem10_api.models import (
     Attempt,
     AttemptAnswer,
@@ -369,6 +373,7 @@ def _attempt_detail(
                     AttemptOption(
                         id=str(option.id),
                         position=option.position,
+                        label=mc_label_from_position(option.position),
                         body=option.body,
                     )
                     for option in options_by_question_id[question.id]
@@ -377,6 +382,7 @@ def _attempt_detail(
                     AttemptOption(
                         id=str(statement.id),
                         position=statement.position,
+                        label=tf_label_from_position(statement.position),
                         body=statement.body,
                     )
                     for statement in statements_by_question_id[question.id]
@@ -595,6 +601,7 @@ def _result_response(
                     AttemptOption(
                         id=str(option.id),
                         position=option.position,
+                        label=mc_label_from_position(option.position),
                         body=option.body,
                     )
                     for option in options_by_question_id[question.id]
@@ -603,6 +610,7 @@ def _result_response(
                     AttemptResultStatement(
                         id=str(statement.id),
                         position=statement.position,
+                        label=tf_label_from_position(statement.position),
                         body=statement.body,
                         selected_value=statement_answer_values.get(statement.id),
                         correct_value=statement.is_correct,

@@ -392,6 +392,7 @@ class Question(Base):
     body: Mapped[str] = mapped_column(Text)
     source_text: Mapped[str | None] = mapped_column(Text)
     explanation: Mapped[str] = mapped_column(Text)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint("position > 0", name="questions_position_check"),
@@ -402,7 +403,12 @@ class Question(Base):
             name="questions_type_check",
         ),
         Index(
-            "uq_questions_version_position", "exam_version_id", "position", unique=True
+            "uq_questions_version_position",
+            "exam_version_id",
+            "position",
+            unique=True,
+            postgresql_where=(deleted_at.is_(None)),
+            sqlite_where=(deleted_at.is_(None)),
         ),
         Index(
             "uq_questions_version_part_position",
@@ -410,6 +416,8 @@ class Question(Base):
             "part_number",
             "part_position",
             unique=True,
+            postgresql_where=(deleted_at.is_(None)),
+            sqlite_where=(deleted_at.is_(None)),
         ),
     )
 
@@ -424,10 +432,18 @@ class QuestionOption(Base):
     position: Mapped[int] = mapped_column(Integer)
     body: Mapped[str] = mapped_column(Text)
     is_correct: Mapped[bool] = mapped_column(Boolean, default=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint("position > 0", name="question_options_position_check"),
-        Index("uq_question_options_position", "question_id", "position", unique=True),
+        Index(
+            "uq_question_options_position",
+            "question_id",
+            "position",
+            unique=True,
+            postgresql_where=(deleted_at.is_(None)),
+            sqlite_where=(deleted_at.is_(None)),
+        ),
     )
 
 
@@ -441,11 +457,17 @@ class QuestionStatement(Base):
     position: Mapped[int] = mapped_column(Integer)
     body: Mapped[str] = mapped_column(Text)
     is_correct: Mapped[bool] = mapped_column(Boolean)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint("position > 0", name="question_statements_position_check"),
         Index(
-            "uq_question_statements_position", "question_id", "position", unique=True
+            "uq_question_statements_position",
+            "question_id",
+            "position",
+            unique=True,
+            postgresql_where=(deleted_at.is_(None)),
+            sqlite_where=(deleted_at.is_(None)),
         ),
     )
 

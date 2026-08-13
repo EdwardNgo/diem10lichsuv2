@@ -149,7 +149,7 @@ def test_admin_can_create_source_document_upload_url(
 
     client = client_with_db(session_factory, token)
     response = client.post(
-        "/v1/admin/assets/source-documents/upload-url",
+        "/v1/admin/source-documents/upload-url",
         json={
             "filename": "de-thi.pdf",
             "mime_type": "application/pdf",
@@ -194,7 +194,7 @@ def test_source_document_confirm_stores_asset_without_draft(
         "size_bytes": 2048,
         "checksum_sha256": "b" * 64,
     }
-    response = client.post("/v1/admin/assets/source-documents", json=payload)
+    response = client.post("/v1/admin/source-documents", json=payload)
 
     assert response.status_code == 201
     data = response.json()
@@ -209,7 +209,7 @@ def test_source_document_confirm_stores_asset_without_draft(
         assert asset.checksum_sha256 == "b" * 64
         assert session.scalar(select(ExamVersion)) is None
 
-    duplicate_response = client.post("/v1/admin/assets/source-documents", json=payload)
+    duplicate_response = client.post("/v1/admin/source-documents", json=payload)
     assert duplicate_response.status_code == 409
 
     app.dependency_overrides.clear()
@@ -236,7 +236,7 @@ def test_source_document_upload_rejects_student_and_invalid_metadata(
 
     student_client = client_with_db(session_factory, student_token)
     forbidden_response = student_client.post(
-        "/v1/admin/assets/source-documents/upload-url",
+        "/v1/admin/source-documents/upload-url",
         json={
             "filename": "source.pdf",
             "mime_type": "application/pdf",
@@ -249,7 +249,7 @@ def test_source_document_upload_rejects_student_and_invalid_metadata(
 
     admin_client = client_with_db(session_factory, admin_token)
     invalid_response = admin_client.post(
-        "/v1/admin/assets/source-documents/upload-url",
+        "/v1/admin/source-documents/upload-url",
         json={
             "filename": "source.exe",
             "mime_type": "application/octet-stream",
@@ -260,7 +260,7 @@ def test_source_document_upload_rejects_student_and_invalid_metadata(
     assert invalid_response.status_code == 422
 
     too_large_response = admin_client.post(
-        "/v1/admin/assets/source-documents",
+        "/v1/admin/source-documents",
         json={
             "object_key": "source-documents/source.pdf",
             "bucket": "test-bucket",
@@ -299,7 +299,7 @@ def test_admin_allowlist_grant_revoke_reactivate_and_audit(
 
     client = client_with_db(session_factory, token)
     grant_response = client.post(
-        "/v1/admin/allowlist",
+        "/v1/admin/access/allowlist",
         json={"email": "New.Admin@Example.COM"},
     )
     assert grant_response.status_code == 201
@@ -307,12 +307,12 @@ def test_admin_allowlist_grant_revoke_reactivate_and_audit(
     assert granted["email"] == "new.admin@example.com"
     assert granted["revoked_at"] is None
 
-    revoke_response = client.delete(f"/v1/admin/allowlist/{granted['id']}")
+    revoke_response = client.delete(f"/v1/admin/access/allowlist/{granted['id']}")
     assert revoke_response.status_code == 200
     assert revoke_response.json()["revoked_at"] is not None
 
     reactivate_response = client.post(
-        "/v1/admin/allowlist",
+        "/v1/admin/access/allowlist",
         json={"email": "new.admin@example.com"},
     )
     assert reactivate_response.status_code == 201
@@ -345,11 +345,11 @@ def test_admin_endpoints_require_login_and_block_student(tmp_path: Path) -> None
         session.commit()
 
     anonymous_client = client_with_db(session_factory)
-    assert anonymous_client.get("/v1/admin/allowlist").status_code == 401
+    assert anonymous_client.get("/v1/admin/access/allowlist").status_code == 401
     app.dependency_overrides.clear()
 
     student_client = client_with_db(session_factory, token)
-    assert student_client.get("/v1/admin/allowlist").status_code == 403
+    assert student_client.get("/v1/admin/access/allowlist").status_code == 403
     app.dependency_overrides.clear()
 
 
@@ -371,7 +371,7 @@ def test_cannot_revoke_last_active_admin(tmp_path: Path) -> None:
         entry_id = entry.id
 
     client = client_with_db(session_factory, token)
-    response = client.delete(f"/v1/admin/allowlist/{entry_id}")
+    response = client.delete(f"/v1/admin/access/allowlist/{entry_id}")
     assert response.status_code == 409
 
     with Session(engine) as session:

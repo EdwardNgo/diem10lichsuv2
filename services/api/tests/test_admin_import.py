@@ -12,6 +12,7 @@ from diem10_api.models import (
     ExamVersion,
     ImportJob,
     Question,
+    QuestionOption,
 )
 from tests.parsers.test_manual_exam import MANUAL_EXAM_FIXTURE
 from tests.test_admin import (
@@ -71,7 +72,7 @@ def test_admin_import_manual_exam_creates_draft(
         asset_id = asset.id
 
     client = client_with_db(session_factory, token)
-    response = client.post(f"/v1/admin/assets/{asset_id}/import", json={})
+    response = client.post(f"/v1/admin/extractions/{asset_id}", json={})
 
     assert response.status_code == 200
     data = response.json()
@@ -88,6 +89,17 @@ def test_admin_import_manual_exam_creates_draft(
         assert version.title == "ĐỀ SỐ 1"
         questions = session.scalars(select(Question)).all()
         assert len(questions) == 28
+        mc_question = next(
+            question
+            for question in questions
+            if question.part_number == 1 and question.part_position == 1
+        )
+        options = session.scalars(
+            select(QuestionOption)
+            .where(QuestionOption.question_id == mc_question.id)
+            .order_by(QuestionOption.position.asc())
+        ).all()
+        assert [option.position for option in options] == [1, 2, 3, 4]
         assert session.scalar(select(AssetLink)) is not None
         assert session.scalar(select(ImportJob)).status == "succeeded"
 
@@ -114,8 +126,8 @@ def test_import_is_idempotent_for_same_asset(
         asset_id = asset.id
 
     client = client_with_db(session_factory, token)
-    first = client.post(f"/v1/admin/assets/{asset_id}/import", json={})
-    second = client.post(f"/v1/admin/assets/{asset_id}/import", json={})
+    first = client.post(f"/v1/admin/extractions/{asset_id}", json={})
+    second = client.post(f"/v1/admin/extractions/{asset_id}", json={})
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -142,7 +154,7 @@ def test_student_cannot_import_source_document(tmp_path: Path) -> None:
 
     client = client_with_db(session_factory, student_token)
     response = client.post(
-        "/v1/admin/assets/00000000-0000-0000-0000-000000000001/import",
+        "/v1/admin/extractions/00000000-0000-0000-0000-000000000001",
         json={},
     )
     assert response.status_code == 403
@@ -185,7 +197,7 @@ def test_import_ocr_pdf_is_rejected(
         asset_id = asset.id
 
     client = client_with_db(session_factory, token)
-    response = client.post(f"/v1/admin/assets/{asset_id}/import", json={})
+    response = client.post(f"/v1/admin/extractions/{asset_id}", json={})
 
     assert response.status_code == 200
     assert response.json()["status"] == "failed"

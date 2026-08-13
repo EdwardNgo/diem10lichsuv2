@@ -27,6 +27,7 @@ class StudentExamPage(BaseModel):
 class StudentExamOption(BaseModel):
     id: str
     position: int
+    label: str
     body: str
 
 

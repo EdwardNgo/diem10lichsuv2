@@ -18,6 +18,7 @@ _TF_STATEMENT = re.compile(r"^([a-d])\)\s*(.+)$", re.IGNORECASE)
 _MC_ANSWER = re.compile(r"^(\d+)\.\s*([A-D])\s*$", re.IGNORECASE)
 _TF_ANSWER = re.compile(r"^(Đúng|Sai)\s*$", re.IGNORECASE)
 _PART1_ANSWERS = re.compile(r"^Phần\s+I\b", re.IGNORECASE)
+_PART1_ANSWERS_MARKER = re.compile(r"^Phần\s+I\s*$", re.IGNORECASE)
 _PART2_ANSWERS = re.compile(r"^Phần\s+II\b", re.IGNORECASE)
 _CITATION = re.compile(r"^\(.+\)$")
 _COLUMN_HEADER = re.compile(r"^[a-d](?:\s+[a-d]){3}$", re.IGNORECASE)
@@ -144,6 +145,29 @@ def parse_manual_exam_lines(
             continue
 
         if state == "PART2":
+            if _should_start_answers_part1(line, draft):
+                flush_tf()
+                state = "ANSWERS"
+                answer_section = "PART1"
+                continue
+            mc_answer_match = _MC_ANSWER.match(line)
+            if mc_answer_match and draft.part2_questions:
+                flush_tf()
+                state = "ANSWERS"
+                answer_section = "PART1"
+                question_number = int(mc_answer_match.group(1))
+                letter = mc_answer_match.group(2).upper()
+                matched = _apply_mc_answer(draft, question_number, letter)
+                if not matched:
+                    draft.findings.append(
+                        ParserFinding(
+                            severity="warning",
+                            field_path=f"questions.part1[{question_number}].correct_option",
+                            message="Không khớp câu hỏi với đáp án trích xuất.",
+                            raw_value=letter,
+                        )
+                    )
+                continue
             question_match = _QUESTION.match(line)
             if question_match:
                 flush_tf()
@@ -233,6 +257,12 @@ def parse_manual_exam_lines(
 
     _finalize_findings(draft)
     return draft
+
+
+def _should_start_answers_part1(line: str, draft: ParsedExamDraft) -> bool:
+    if not _PART1_ANSWERS_MARKER.match(line):
+        return False
+    return bool(draft.part1_questions or draft.part2_questions)
 
 
 def _apply_mc_answer(

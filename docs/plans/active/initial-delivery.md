@@ -79,8 +79,9 @@ Ngoài phạm vi:
   asset riêng tư mà chưa tạo draft.
 - [x] Triển khai US-11: parser manual-exams + import draft — chi tiết tại
   `docs/plans/completed/us-11-manual-exam-parser.md`.
-- [ ] Triển khai US-12 đến US-13: rà soát/xuất bản và tạo draft thủ công bằng
-  editor chung.
+- [x] Triển khai US-12: rà soát/xuất bản — chi tiết tại
+  `docs/plans/completed/us-12-draft-review-publish.md`.
+- [ ] Triển khai US-13: tạo draft thủ công bằng editor chung (US-12).
 - [ ] Hoàn thành validation và bằng chứng sẵn sàng staging.
 
 ## Quyết định
@@ -148,6 +149,8 @@ Ngoài phạm vi:
 - US-11 đã xác minh bằng parser fixture `ĐỀ SỐ 1.docx`, test import admin
   (draft 28 câu, idempotency, OCR reject, student 403), toàn bộ 30 test API,
   `ruff check .`, `pnpm lint`.
+- US-12 đã xác minh bằng validation unit tests, import→metadata→publish integration,
+  toàn bộ 40 test API, `ruff check .`, `pnpm lint`, `pnpm build`.
 
 ## Kết quả
 

@@ -4,6 +4,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from diem10_api.core.option_labels import (
+    mc_label_from_position,
+    tf_label_from_position,
+)
 from diem10_api.models import Attempt, User
 from diem10_api.repositories.exam_repository import ExamRepository
 from diem10_api.schemas.student_exams import (
@@ -166,6 +170,7 @@ class StudentExamService:
                 StudentExamOption(
                     id=str(option.id),
                     position=option.position,
+                    label=mc_label_from_position(option.position),
                     body=option.body,
                 )
             )
@@ -174,6 +179,7 @@ class StudentExamService:
                 StudentExamOption(
                     id=str(statement.id),
                     position=statement.position,
+                    label=tf_label_from_position(statement.position),
                     body=statement.body,
                 )
             )

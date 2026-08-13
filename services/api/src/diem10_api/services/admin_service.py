@@ -18,14 +18,23 @@ from diem10_api.schemas.admin import (
     SourceDocumentUploadRequest,
     SourceDocumentUploadUrl,
 )
+from diem10_api.schemas.admin_draft import (
+    QuestionImageConfirmRequest,
+    QuestionImageUploadRequest,
+    QuestionImageUploadUrl,
+)
 from diem10_api.storage import (
     PRESIGNED_UPLOAD_TTL_SECONDS,
+    QUESTION_IMAGE_PREFIX,
     SOURCE_DOCUMENT_PREFIX,
     R2Settings,
     StorageConfigurationError,
+    build_question_image_key,
     build_source_document_key,
+    create_presigned_question_image_upload,
     create_presigned_source_upload,
     get_r2_settings,
+    validate_question_image_metadata,
     validate_source_document_metadata,
 )
 
@@ -193,6 +202,87 @@ class AdminService:
         return SourceDocumentPage(
             items=[self._asset_response(asset) for asset in assets]
         )
+
+    def create_question_image_upload_url(
+        self,
+        payload: QuestionImageUploadRequest,
+    ) -> QuestionImageUploadUrl:
+        checksum_sha256 = self._validate_question_image_payload(payload)
+        settings = self._r2_settings_or_503()
+        object_key = build_question_image_key(payload.filename)
+        upload_url, headers = create_presigned_question_image_upload(
+            object_key=object_key,
+            mime_type=payload.mime_type,
+            checksum_sha256=checksum_sha256,
+            settings=settings,
+        )
+        return QuestionImageUploadUrl(
+            object_key=object_key,
+            bucket=settings.bucket_name,
+            upload_url=upload_url,
+            method="PUT",
+            headers=headers,
+            expires_in_seconds=PRESIGNED_UPLOAD_TTL_SECONDS,
+        )
+
+    def confirm_question_image_upload(
+        self,
+        payload: QuestionImageConfirmRequest,
+        actor: User,
+    ) -> AssetResponse:
+        checksum_sha256 = self._validate_question_image_payload(payload)
+        settings = self._r2_settings_or_503()
+        if payload.bucket != settings.bucket_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Bucket does not match configured R2 bucket",
+            )
+        if not payload.object_key.startswith(QUESTION_IMAGE_PREFIX):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Object key is not a question image key",
+            )
+        existing = self._repo.get_asset_by_object_key(payload.object_key)
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Question image already confirmed",
+            )
+
+        asset = Asset(
+            object_key=payload.object_key,
+            bucket=payload.bucket,
+            mime_type=payload.mime_type,
+            size_bytes=payload.size_bytes,
+            checksum_sha256=checksum_sha256,
+            asset_kind="question_image",
+            uploaded_by_user_id=actor.id,
+        )
+        saved = self._repo.add_asset(asset)
+        logger.info(
+            "admin.question_image.confirmed",
+            asset_id=str(saved.id),
+            object_key=saved.object_key,
+            uploaded_by=str(actor.id),
+        )
+        return self._asset_response(saved)
+
+    @staticmethod
+    def _validate_question_image_payload(
+        payload: QuestionImageUploadRequest | QuestionImageConfirmRequest,
+    ) -> str:
+        try:
+            return validate_question_image_metadata(
+                filename=payload.filename,
+                mime_type=payload.mime_type,
+                size_bytes=payload.size_bytes,
+                checksum_sha256=payload.checksum_sha256,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(error),
+            ) from error
 
     def list_allowlist(self) -> AllowlistPage:
         entries = self._repo.list_allowlist()

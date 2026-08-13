@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class AttemptOption(BaseModel):
     id: str
     position: int
+    label: str
     body: str
 
 
@@ -75,6 +76,7 @@ class SavedAttemptAnswer(BaseModel):
 class AttemptResultStatement(BaseModel):
     id: str
     position: int
+    label: str
     body: str
     selected_value: bool | None
     correct_value: bool
