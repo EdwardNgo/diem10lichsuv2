@@ -29,7 +29,8 @@ export default function TermsPage() {
               Nội dung ôn tập
             </h2>
             <p className="mt-3">
-              Đề thi, câu hỏi, đáp án và lời giải chỉ phục vụ mục đích học tập.
+              Kho đề gồm đề thi thử do chúng tôi biên soạn và đề tham khảo từ
+              nguồn khác, chỉ dùng để ôn tập, không phải đề thi chính thức.
               Không sao chép, phân phối lại hoặc dùng nội dung để gây nhiễu hệ
               thống.
             </p>

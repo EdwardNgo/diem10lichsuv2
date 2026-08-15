@@ -8,9 +8,9 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Điểm 10 Lịch sử | Ôn thi THPT",
+  title: "Điểm 10 Lịch sử | Luyện thi tốt nghiệp THPT",
   description:
-    "Nền tảng ôn thi Lịch sử THPT với đề trắc nghiệm, chấm điểm và lời giải chi tiết.",
+    "Tổng hợp đề thi thử môn Lịch sử: đề tự biên soạn và đề tham khảo từ các nguồn khác, theo cấu trúc kỳ thi tốt nghiệp THPT, có chấm điểm và lời giải chi tiết.",
 };
 
 export default function RootLayout({

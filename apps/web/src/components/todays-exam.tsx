@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { loginHref } from "@/lib/auth-links";
+import { LoginModal } from "@/components/login-modal";
 
 type PublicExam = {
   slug: string;
@@ -42,6 +41,7 @@ function featuredQuestionCount(exams: PublicExam[]): number {
 export function TodaysExam() {
   const [state, setState] = useState<ExamState>(initialState);
   const [reloadKey, setReloadKey] = useState(0);
+  const [loginReturnTo, setLoginReturnTo] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -68,8 +68,10 @@ export function TodaysExam() {
     return () => controller.abort();
   }, [reloadKey]);
 
+  let content = null;
+
   if (state.kind === "loading") {
-    return (
+    content = (
       <div
         aria-live="polite"
         className="border border-[#bae6fd] bg-white p-5 sm:p-6"
@@ -92,10 +94,8 @@ export function TodaysExam() {
         </div>
       </div>
     );
-  }
-
-  if (state.kind === "error") {
-    return (
+  } else if (state.kind === "error") {
+    content = (
       <div
         aria-live="polite"
         className="border border-[#d9b8b1] bg-[#f9efed] p-6 sm:p-8"
@@ -116,104 +116,116 @@ export function TodaysExam() {
           >
             Thử lại
           </button>
-          <Link
+          <button
             className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#123047] px-5 py-2 font-semibold text-white"
-            href={loginHref("/exams")}
+            onClick={() => setLoginReturnTo("/exams")}
+            type="button"
           >
             Đăng nhập
-          </Link>
+          </button>
         </div>
       </div>
     );
-  }
-
-  if (state.exams.length === 0) {
-    return (
+  } else if (state.exams.length === 0) {
+    content = (
       <div className="border border-[#bae6fd] bg-white p-6 sm:p-8">
         <p className="text-sm font-semibold text-[#0284c7]">CHƯA CÓ ĐỀ ĐỂ LÀM</p>
         <p className="mt-2 max-w-md text-lg font-semibold leading-7">
           Nội dung sẽ chỉ hiển thị sau khi admin hoàn tất rà soát và xuất bản.
         </p>
-        <Link
+        <button
           className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-[#123047] px-5 py-2 font-semibold text-white hover:bg-[#0284c7]"
-          href={loginHref("/exams")}
+          onClick={() => setLoginReturnTo("/exams")}
+          type="button"
         >
           Đăng nhập
-        </Link>
+        </button>
+      </div>
+    );
+  } else {
+    const duration = averageDuration(state.exams);
+    const questionCount = featuredQuestionCount(state.exams);
+
+    content = (
+      <div className="space-y-4" aria-live="polite">
+        <dl className="grid border border-[#bae6fd] bg-white sm:grid-cols-3">
+          {[
+            ["Đề đã xuất bản", state.total.toString()],
+            ["Câu trong đề nổi bật", questionCount.toString()],
+            ["Phút trung bình", duration.toString()],
+          ].map(([label, value]) => (
+            <div
+              className="border-b border-[#bae6fd] p-5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"
+              key={label}
+            >
+              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[#45667a]">
+                {label}
+              </dt>
+              <dd className="mt-2 text-3xl font-semibold tracking-tight text-[#123047]">
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        {state.exams.map((exam) => (
+          <article
+            className="grid gap-5 border border-[#bae6fd] bg-white p-5 transition-colors hover:border-[#0284c7] sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center"
+            key={exam.slug}
+          >
+            <div>
+              <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em]">
+                <span className="bg-[#e0f2fe] px-3 py-1 text-[#0284c7]">
+                  Đã xuất bản
+                </span>
+                {exam.year === null ? null : (
+                  <span className="border border-[#bae6fd] px-3 py-1 text-[#45667a]">
+                    {exam.year}
+                  </span>
+                )}
+              </div>
+              <h3 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
+                {exam.title}
+              </h3>
+              <p className="mt-2 max-w-2xl leading-7 text-[#45667a]">
+                {exam.summary}
+              </p>
+              <dl className="mt-5 grid gap-3 text-sm text-[#45667a] sm:grid-cols-3">
+                <div className="border-t border-[#bae6fd] pt-3">
+                  <dt className="font-semibold text-[#123047]">Chuyên đề</dt>
+                  <dd className="mt-1">{exam.topic}</dd>
+                </div>
+                <div className="border-t border-[#bae6fd] pt-3">
+                  <dt className="font-semibold text-[#123047]">Số câu</dt>
+                  <dd className="mt-1">{exam.question_count} câu</dd>
+                </div>
+                <div className="border-t border-[#bae6fd] pt-3">
+                  <dt className="font-semibold text-[#123047]">Thời lượng</dt>
+                  <dd className="mt-1">{exam.duration_minutes} phút</dd>
+                </div>
+              </dl>
+            </div>
+            <button
+              className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#123047] px-5 py-2 font-semibold text-white hover:bg-[#0284c7] lg:min-w-32"
+              onClick={() => setLoginReturnTo(`/exams/${exam.slug}`)}
+              type="button"
+            >
+              Làm bài
+            </button>
+          </article>
+        ))}
       </div>
     );
   }
 
-  const duration = averageDuration(state.exams);
-  const questionCount = featuredQuestionCount(state.exams);
-
   return (
-    <div className="space-y-4" aria-live="polite">
-      <dl className="grid border border-[#bae6fd] bg-white sm:grid-cols-3">
-        {[
-          ["Đề đã xuất bản", state.total.toString()],
-          ["Câu trong đề nổi bật", questionCount.toString()],
-          ["Phút trung bình", duration.toString()],
-        ].map(([label, value]) => (
-          <div
-            className="border-b border-[#bae6fd] p-5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"
-            key={label}
-          >
-            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[#45667a]">
-              {label}
-            </dt>
-            <dd className="mt-2 text-3xl font-semibold tracking-tight text-[#123047]">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      {state.exams.map((exam) => (
-        <article
-          className="grid gap-5 border border-[#bae6fd] bg-white p-5 transition-colors hover:border-[#0284c7] sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center"
-          key={exam.slug}
-        >
-          <div>
-            <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em]">
-              <span className="bg-[#e0f2fe] px-3 py-1 text-[#0284c7]">
-                Đã xuất bản
-              </span>
-              {exam.year === null ? null : (
-                <span className="border border-[#bae6fd] px-3 py-1 text-[#45667a]">
-                  {exam.year}
-                </span>
-              )}
-            </div>
-            <h3 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
-              {exam.title}
-            </h3>
-            <p className="mt-2 max-w-2xl leading-7 text-[#45667a]">
-              {exam.summary}
-            </p>
-            <dl className="mt-5 grid gap-3 text-sm text-[#45667a] sm:grid-cols-3">
-              <div className="border-t border-[#bae6fd] pt-3">
-                <dt className="font-semibold text-[#123047]">Chuyên đề</dt>
-                <dd className="mt-1">{exam.topic}</dd>
-              </div>
-              <div className="border-t border-[#bae6fd] pt-3">
-                <dt className="font-semibold text-[#123047]">Số câu</dt>
-                <dd className="mt-1">{exam.question_count} câu</dd>
-              </div>
-              <div className="border-t border-[#bae6fd] pt-3">
-                <dt className="font-semibold text-[#123047]">Thời lượng</dt>
-                <dd className="mt-1">{exam.duration_minutes} phút</dd>
-              </div>
-            </dl>
-          </div>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#123047] px-5 py-2 font-semibold text-white hover:bg-[#0284c7] lg:min-w-32"
-            href={loginHref(`/exams/${exam.slug}`)}
-          >
-            Làm bài
-          </Link>
-        </article>
-      ))}
-    </div>
+    <>
+      {content}
+      <LoginModal
+        onClose={() => setLoginReturnTo(null)}
+        open={loginReturnTo !== null}
+        returnTo={loginReturnTo ?? "/exams"}
+      />
+    </>
   );
 }

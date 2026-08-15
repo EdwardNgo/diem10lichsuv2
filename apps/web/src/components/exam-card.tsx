@@ -67,7 +67,7 @@ export function ExamCard({ exam, authenticated, onGuestSelect }: ExamCardProps) 
         </h2>
         <p className="mt-2 min-h-[4rem] line-clamp-3 text-sm leading-6 text-[#45667a]">
           {exam.summary.trim() === ""
-            ? "Đề luyện tập theo cấu trúc thi THPT Quốc gia."
+            ? "Đề thi thử môn Lịch sử, theo cấu trúc kỳ thi tốt nghiệp THPT."
             : exam.summary}
         </p>
         <p className="mt-3 text-xs font-semibold text-[#64748b]">

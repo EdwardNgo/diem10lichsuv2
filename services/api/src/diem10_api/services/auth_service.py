@@ -5,7 +5,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
-from urllib.parse import urlencode, urlsplit, urlunsplit
+from urllib.parse import urlencode
 
 import httpx
 import jwt
@@ -96,12 +96,12 @@ def _redirect_uri(settings: AuthSettings) -> str:
 
 
 def _append_auth_error(return_to: str, error_code: str) -> str:
-    parsed = urlsplit(return_to)
-    query_items: list[str] = []
-    if parsed.query:
-        query_items.append(parsed.query)
-    query_items.append(urlencode({"auth_error": error_code}))
-    return urlunsplit(("", "", parsed.path, "&".join(query_items), parsed.fragment))
+    # Cancelled returns silently to the original destination.
+    if error_code == "cancelled":
+        return return_to
+
+    # Show friendly errors on the login surface without flashing the destination.
+    return f"/login?{urlencode({'return_to': return_to, 'auth_error': error_code})}"
 
 
 def _require_google_config(settings: AuthSettings) -> None:

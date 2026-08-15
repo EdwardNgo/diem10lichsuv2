@@ -6,6 +6,10 @@
 có giới hạn thời gian, lời giải ngay sau khi làm và lịch sử bài làm bền vững.
 Quản trị viên kiểm soát mọi nội dung đề trước khi học sinh nhìn thấy.
 
+Kho đề công khai gồm đề thi thử tự biên soạn và đề tham khảo từ các nguồn khác,
+dùng để ôn tập kỳ thi tốt nghiệp THPT quốc gia môn Lịch sử. Nội dung này không
+phải đề thi chính thức của Bộ GDĐT.
+
 ## Người dùng
 
 - Khách: khám phá sản phẩm và các đề đã xuất bản.

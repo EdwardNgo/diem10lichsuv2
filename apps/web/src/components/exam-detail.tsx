@@ -209,6 +209,9 @@ export function ExamDetail() {
         <h1 className="mt-5 text-4xl font-semibold tracking-tight">
           {state.exam.title}
         </h1>
+        <p className="mt-3 text-sm font-semibold text-[#0284c7]">
+          Đề thi thử ôn tập theo cấu trúc kỳ thi tốt nghiệp THPT môn Lịch sử.
+        </p>
         <p className="mt-4 max-w-3xl leading-7 text-[#45667a]">
           {state.exam.summary}
         </p>

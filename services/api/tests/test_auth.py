@@ -134,7 +134,9 @@ def test_google_callback_invalid_state_does_not_create_user(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/exams?auth_error=invalid_state"
+    assert response.headers["location"] == (
+        "/login?return_to=%2Fexams&auth_error=invalid_state"
+    )
 
     with Session(session_factory.kw["bind"]) as session:
         assert session.scalar(select(User)) is None
@@ -193,7 +195,9 @@ def test_google_callback_requires_verified_email(
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/history?auth_error=invalid_profile"
+    assert response.headers["location"] == (
+        "/login?return_to=%2Fhistory&auth_error=invalid_profile"
+    )
     with Session(session_factory.kw["bind"]) as session:
         assert session.scalar(select(User)) is None
         assert session.scalar(select(UserSession)) is None

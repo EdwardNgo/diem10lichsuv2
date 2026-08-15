@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { loginHref } from "@/lib/auth-links";
+import { LoginModal } from "@/components/login-modal";
 
 type AuthUser = {
   avatar_url: string | null;
@@ -19,44 +19,50 @@ type AuthState =
   | { kind: "authenticated"; user: AuthUser };
 
 export function AuthStatus({
-  loginReturnTo = "/exams",
+  loginReturnTo,
   logoutRedirectTo = "/",
 }: {
   loginReturnTo?: string;
   logoutRedirectTo?: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [state, setState] = useState<AuthState>({ kind: "loading" });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const returnTo = loginReturnTo ?? pathname ?? "/exams";
 
   useEffect(() => {
     const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch("/v1/auth/me", {
+            credentials: "same-origin",
+            signal: controller.signal,
+          });
+          if (response.status === 401) {
+            setState({ kind: "anonymous" });
+            return;
+          }
+          if (!response.ok) {
+            throw new Error("Không thể tải phiên đăng nhập");
+          }
 
-    async function loadUser() {
-      try {
-        const response = await fetch("/v1/auth/me", {
-          credentials: "same-origin",
-          signal: controller.signal,
-        });
-        if (response.status === 401) {
-          setState({ kind: "anonymous" });
-          return;
+          const data: { user: AuthUser } = await response.json();
+          setState({ kind: "authenticated", user: data.user });
+        } catch {
+          if (!controller.signal.aborted) {
+            setState({ kind: "anonymous" });
+          }
         }
-        if (!response.ok) {
-          throw new Error("Không thể tải phiên đăng nhập");
-        }
+      })();
+    }, 0);
 
-        const data: { user: AuthUser } = await response.json();
-        setState({ kind: "authenticated", user: data.user });
-      } catch {
-        if (!controller.signal.aborted) {
-          setState({ kind: "anonymous" });
-        }
-      }
-    }
-
-    void loadUser();
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, []);
 
   async function logout() {
@@ -128,11 +134,19 @@ export function AuthStatus({
   }
 
   return (
-    <Link
-      className="rounded-md bg-[#123047] px-4 py-2.5 text-white hover:bg-[#0284c7]"
-      href={loginHref(loginReturnTo)}
-    >
-      Đăng nhập
-    </Link>
+    <>
+      <button
+        className="rounded-md bg-[#123047] px-4 py-2.5 text-white hover:bg-[#0284c7]"
+        onClick={() => setLoginOpen(true)}
+        type="button"
+      >
+        Đăng nhập
+      </button>
+      <LoginModal
+        onClose={() => setLoginOpen(false)}
+        open={loginOpen}
+        returnTo={returnTo}
+      />
+    </>
   );
 }

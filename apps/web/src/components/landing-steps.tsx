@@ -5,8 +5,8 @@ import Image from "next/image";
 const steps = [
   {
     number: "01",
-    title: "Chọn đề",
-    body: "Duyệt kho đề Lịch sử, lọc theo giai đoạn kiến thức và năm.",
+    title: "Chọn đề thi thử",
+    body: "Chọn đề theo chủ đề hoặc năm, rồi bắt đầu một buổi thi thử.",
     image: "/images/landing-select-exam.gif",
     alt: "Animation quyển sách cho bước chọn đề",
   },
@@ -45,11 +45,10 @@ export function LandingSteps() {
             className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl"
             id="landing-steps-heading"
           >
-            Luyện đề theo một mạch rõ ràng
+            Ôn tập theo 3 bước
           </h2>
           <p className="mt-4 leading-7 text-[#bae6fd]">
-            Ba bước chính được tách riêng để bạn biết mình đang ở đâu trong quá
-            trình ôn tập.
+            Chọn đề, làm bài, rồi xem lại lời giải để biết mình còn yếu ở đâu.
           </p>
         </div>
 

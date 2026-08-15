@@ -117,7 +117,7 @@ export function FeaturedExams() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold tracking-[0.16em] text-[#0284c7]">
-              KHO ĐỀ THẬT
+              KHO ĐỀ THI THỬ
             </p>
             <h2
               className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
@@ -126,8 +126,8 @@ export function FeaturedExams() {
               Đề nổi bật
             </h2>
             <p className="mt-2 max-w-xl text-[#45667a]">
-              {state.total} đề đã xuất bản, bắt đầu luyện ngay hoặc khám phá
-              thêm trong kho đề.
+              {state.total} đề thi thử Lịch sử, gồm đề tự biên soạn và đề tham
+              khảo. Chọn một đề để luyện ngay, hoặc xem cả kho.
             </p>
           </div>
           <Link

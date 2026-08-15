@@ -10,14 +10,15 @@ export default function ExamsPage() {
 
       <main className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
         <p className="text-sm font-semibold tracking-[0.16em] text-[#0284c7]">
-          KHO ĐỀ LUYỆN THI
+          KHO ĐỀ THI THỬ
         </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight">
-          Tìm đề phù hợp với kế hoạch ôn tập
+          Đề thi thử môn Lịch sử
         </h1>
         <p className="mt-4 max-w-2xl leading-7 text-[#45667a]">
-          Lọc theo chủ đề và năm. Đăng nhập để hệ thống hiển thị trạng
-          thái làm bài của riêng bạn.
+          Lọc theo chủ đề và năm để tìm đúng phần cần ôn. Kho gồm đề tự biên
+          soạn và đề tham khảo từ nguồn khác, theo cấu trúc kỳ thi tốt nghiệp
+          THPT.
         </p>
 
         <section className="mt-8">

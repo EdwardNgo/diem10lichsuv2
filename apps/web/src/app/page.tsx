@@ -19,14 +19,15 @@ export default function Home() {
         <section className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1.04fr_0.96fr] lg:py-24">
           <div className="max-w-2xl">
             <p className="mb-5 text-sm font-semibold tracking-[0.16em] text-[#0284c7]">
-              ÔN THI THPT QUỐC GIA
+              ĐỀ THI THỬ LỊCH SỬ
             </p>
             <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
-              Luyện đề Lịch sử theo đúng nhịp thi.
+              Luyện thi tốt nghiệp THPT môn Lịch sử
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-[#45667a] sm:text-lg sm:leading-8">
-              Làm bài có thời gian, tự lưu đáp án và xem lại lời giải sau khi
-              nộp. Mỗi lần luyện đều được giữ trong lịch sử theo từng đề.
+              Tổng hợp đề thi thử môn Lịch sử: đề do chúng tôi biên soạn và đề
+              tham khảo từ các nguồn khác, theo cấu trúc kỳ thi tốt nghiệp THPT,
+              giúp bạn làm quen dạng đề trước kỳ thi.
             </p>
             <div className="mt-9">
               <Link
@@ -50,7 +51,7 @@ export default function Home() {
             <div className="relative">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm font-semibold tracking-[0.14em] text-[#0284c7]">
-                  PHIÊN ÔN TẬP MẪU
+                  ĐỀ MẪU
                 </p>
                 <span className="rounded-full bg-[#e0f2fe] px-3 py-1 text-xs font-semibold text-[#0369a1]">
                   50 phút
@@ -60,7 +61,7 @@ export default function Home() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#45667a]">
-                      Đề ôn luyện
+                      Đề thi thử
                     </p>
                     <h2 className="mt-2 text-2xl font-semibold leading-snug">
                       Việt Nam 1945-1975
@@ -107,15 +108,24 @@ export default function Home() {
           <div className="mx-auto grid max-w-6xl gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Một nơi để luyện đề, xem lại và làm lại.
+                Đề tự biên soạn và đề tham khảo
               </h2>
+              <p className="mt-4 max-w-md leading-7 text-[#45667a]">
+                Kho đề gồm đề thi thử do chúng tôi soạn và đề tham khảo từ nguồn
+                khác, bám cấu trúc kỳ thi tốt nghiệp THPT môn Lịch sử. Đây là đề
+                ôn tập, không phải đề thi chính thức.
+              </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               {[
-                ["Kho đề có bộ lọc", "Lọc theo chủ đề và năm để tìm đúng đề cần luyện."],
-                ["Đúng cấu trúc mới", "Phần I trắc nghiệm ABCD và Phần II đúng sai theo tư liệu."],
-                ["Không mất bài", "Đáp án được tự lưu, thời gian tạm dừng khi rời màn hình làm bài."],
-                ["Xem lại theo đề", "Lịch sử gom theo từng đề để so sánh các lần làm rõ hơn."],
+                [
+                  "Đúng dạng đề thi",
+                  "Phần I trắc nghiệm ABCD và Phần II đúng sai theo tư liệu, để bạn luyện đúng kiểu câu sẽ gặp.",
+                ],
+                [
+                  "Làm như một buổi thi thử",
+                  "Có thời gian, tự lưu bài, xem điểm và lời giải ngay sau khi nộp để biết phần nào còn yếu.",
+                ],
               ].map(([title, body]) => (
                 <article className="border border-[#bae6fd] bg-[#f8fdff] p-5" key={title}>
                   <h3 className="font-semibold">{title}</h3>
@@ -136,8 +146,8 @@ export default function Home() {
               Điểm 10 <span className="text-[#0284c7]">Lịch sử</span>
             </p>
             <p className="mt-3 max-w-sm leading-6">
-              Nền tảng luyện đề Lịch sử THPT với chấm điểm, lời giải và lịch sử
-              làm bài theo từng đề.
+              Kho đề thi thử Lịch sử: tự biên soạn và tham khảo từ các nguồn
+              khác.
             </p>
           </div>
           <nav aria-label="Liên kết footer" className="grid gap-2">
