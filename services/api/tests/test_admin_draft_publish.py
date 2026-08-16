@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 
+import pytest
 from pytest import MonkeyPatch
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
@@ -8,7 +9,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from diem10_api.main import app
 from diem10_api.models import AuditLog, ExamVersion, Topic
-from tests.parsers.test_manual_exam import MANUAL_EXAM_FIXTURE
+from tests.parsers.test_manual_exam import (
+    MANUAL_EXAM_FIXTURE,
+    MANUAL_EXAM_FIXTURE_MISSING_REASON,
+)
 from tests.test_admin import (
     client_with_db,
     configure_r2,
@@ -16,6 +20,11 @@ from tests.test_admin import (
     session_override,
 )
 from tests.test_admin_import import create_source_asset
+
+pytestmark = pytest.mark.skipif(
+    not MANUAL_EXAM_FIXTURE.exists(),
+    reason=MANUAL_EXAM_FIXTURE_MISSING_REASON,
+)
 
 
 def _ensure_topic(session: Session) -> Topic:

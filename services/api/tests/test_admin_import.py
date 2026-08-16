@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 
+import pytest
 from pytest import MonkeyPatch
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,13 +15,21 @@ from diem10_api.models import (
     Question,
     QuestionOption,
 )
-from tests.parsers.test_manual_exam import MANUAL_EXAM_FIXTURE
+from tests.parsers.test_manual_exam import (
+    MANUAL_EXAM_FIXTURE,
+    MANUAL_EXAM_FIXTURE_MISSING_REASON,
+)
 from tests.test_admin import (
     client_with_db,
     configure_r2,
     create_admin,
     create_user_session,
     session_override,
+)
+
+pytestmark = pytest.mark.skipif(
+    not MANUAL_EXAM_FIXTURE.exists(),
+    reason=MANUAL_EXAM_FIXTURE_MISSING_REASON,
 )
 
 

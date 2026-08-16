@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from diem10_api.parsers import parse_source
 from diem10_api.parsers.manual_exam import parse_manual_exam_lines
 
@@ -7,6 +9,12 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 MANUAL_EXAMS_DIR = REPO_ROOT / "parser-source/manual-exams"
 MANUAL_EXAM_FIXTURE = MANUAL_EXAMS_DIR / "ĐỀ SỐ 1.docx"
 MANUAL_EXAM_FIXTURE_2 = MANUAL_EXAMS_DIR / "ĐỀ SỐ 2.docx"
+MANUAL_EXAM_FIXTURE_MISSING_REASON = "manual exam fixture files are not available"
+
+pytestmark = pytest.mark.skipif(
+    not MANUAL_EXAM_FIXTURE.exists(),
+    reason=MANUAL_EXAM_FIXTURE_MISSING_REASON,
+)
 
 
 def test_manual_exam_fixture_parses_full_structure() -> None:
