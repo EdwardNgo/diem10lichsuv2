@@ -72,14 +72,37 @@ UAT/VPS dùng cùng `compose.yml`, nhưng `.env` phải là secret của môi tr
 - `APP_BASE_URL` là domain thật của môi trường.
 - Google OAuth callback phải là `${APP_BASE_URL}/v1/auth/google/callback`.
 - `POSTGRES_PASSWORD`, Google OAuth secret và R2 secret không commit vào git.
+- `IMAGE_REGISTRY=ghcr.io`.
+- `IMAGE_NAMESPACE` là GitHub owner/org chứa package `diem10lichsu-web` và
+  `diem10lichsu-api`.
+- `IMAGE_TAG` là tag image bất biến cần deploy, ví dụ `sha-abc1234`; không dùng
+  `local` trên production.
+- `LOG_JSON=true`, `LOG_REQUEST_BODY=false` và `LOG_RESPONSE_BODY=false` cho
+  production.
 - `HTTP_PORT` trỏ tới port được reverse proxy/firewall cho phép.
+
+VPS không build image ứng dụng. GitHub Actions publish image lên GitHub Container
+Registry sau khi kiểm tra web/API xanh, còn VPS chỉ pull image đã version.
+Nếu package GHCR là private, đăng nhập một lần trên VPS bằng GitHub PAT có quyền
+`read:packages`:
+
+```shell
+printf '%s' "$GITHUB_PACKAGES_TOKEN" | docker login ghcr.io -u "$GITHUB_USER" --password-stdin
+```
 
 Deploy cơ bản:
 
 ```shell
-docker compose --env-file .env up -d --build db
+scripts/deploy.sh sha-abc1234
+```
+
+Nếu không dùng script, chạy thủ công:
+
+```shell
+docker compose --env-file .env pull web api
+docker compose --env-file .env up -d db
 docker compose --env-file .env run --rm api python -m alembic upgrade head
-docker compose --env-file .env up -d --build
+docker compose --env-file .env up -d proxy web api
 docker compose --env-file .env ps
 ```
 
@@ -91,6 +114,76 @@ curl -fsS "$APP_BASE_URL/v1/public/exams/filters"
 ```
 
 Admin đầu tiên vẫn bootstrap bằng SQL thủ công theo quyết định US-03.
+
+Rollback release dùng lại image tag cũ:
+
+```shell
+scripts/deploy.sh sha-previous
+```
+
+Không chạy `alembic downgrade` trên production nếu chưa có chỉ đạo rollback cụ
+thể, backup đã kiểm chứng và hiểu rõ tác động dữ liệu.
+
+### TLS Và Domain Production
+
+Khi domain chạy qua Cloudflare, cấu hình DNS A/AAAA trỏ về VPS và bật proxy
+Cloudflare. `APP_BASE_URL` phải dùng HTTPS, ví dụ `https://example.com`, để
+session cookie `Secure` và Google OAuth callback đúng domain.
+
+Cấu hình ban đầu có thể để Cloudflare terminate TLS và forward HTTP tới Nginx
+trên VPS. Trước khi coi môi trường là production ổn định, cài Cloudflare Origin
+Certificate hoặc certificate tương đương trên origin và chuyển SSL mode sang
+Full (strict). Không expose PostgreSQL ra internet; binding trong `compose.yml`
+đã giới hạn ở `127.0.0.1`.
+
+### Backup PostgreSQL Hằng Ngày Vào R2
+
+Tạo R2 bucket riêng cho backup, ví dụ `diem10-backups`, không dùng chung với
+bucket tài liệu nguồn/ảnh. `.env` trên VPS cần có:
+
+```shell
+R2_BACKUP_BUCKET=diem10-backups
+```
+
+Chạy backup thủ công:
+
+```shell
+scripts/backup-postgres.sh
+```
+
+Job cron mẫu lúc 02:00 giờ Việt Nam:
+
+```cron
+0 2 * * * cd /opt/diem10lichsuv2 && ENV_FILE=/opt/diem10lichsuv2/.env scripts/backup-postgres.sh >> /var/log/diem10-backup.log 2>&1
+```
+
+Script tạo `pg_dump -Fc` từ container `db` và upload lên R2 theo key
+`postgres/YYYY/MM/diem10-YYYYMMDDTHHMMSS.dump`. Cấu hình lifecycle trên bucket
+backup để xóa dump cũ sau thời hạn đã chấp nhận, ví dụ 14 ngày cho giai đoạn
+đầu. Bucket tài liệu/ảnh của ứng dụng nên bật object versioning và lifecycle
+riêng.
+
+Diễn tập restore trên staging trước production. Quy trình khôi phục tối thiểu:
+
+```shell
+mkdir -p /tmp/diem10-restore
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+  -e AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+  -e AWS_DEFAULT_REGION=auto \
+  -v /tmp/diem10-restore:/restore \
+  amazon/aws-cli:2.17.37 \
+  s3 cp "s3://$R2_BACKUP_BUCKET/postgres/YYYY/MM/diem10-YYYYMMDDTHHMMSS.dump" /restore/restore.dump \
+  --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+
+docker compose --env-file .env exec -T db pg_restore \
+  --clean --if-exists --no-owner \
+  -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  < /tmp/diem10-restore/restore.dump
+```
+
+Không restore đè production nếu chưa có snapshot/backup mới nhất và cửa sổ
+downtime rõ ràng.
 
 ## Khi Có Thay Đổi Schema
 
@@ -145,9 +238,10 @@ Thứ tự an toàn:
 Lệnh mẫu:
 
 ```shell
-docker compose --env-file .env up -d --build db
+docker compose --env-file .env pull web api
+docker compose --env-file .env up -d db
 docker compose --env-file .env run --rm api python -m alembic upgrade head
-docker compose --env-file .env up -d --build api web proxy
+docker compose --env-file .env up -d api web proxy
 docker compose --env-file .env exec -T api python -m alembic current
 ```
 
@@ -196,6 +290,7 @@ Sau mỗi change có migration:
 - `uvx poetry run pyright`
 - `uvx poetry run pytest`
 - `pnpm lint && pnpm build` trong `apps/web` nếu UI hoặc API contract ảnh hưởng UI.
-- `docker compose --env-file .env up -d --build`
+- `docker compose --env-file .env up -d --build` cho local hoặc
+  `scripts/deploy.sh sha-...` cho VPS.
 - `docker compose --env-file .env exec -T api python -m alembic current`
 - Smoke endpoint liên quan qua Nginx/proxy, không chỉ gọi service nội bộ.

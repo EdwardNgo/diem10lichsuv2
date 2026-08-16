@@ -14,6 +14,7 @@ services:
     mem_limit: 64m
 
   web:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-diem10}/diem10lichsu-web:${IMAGE_TAG:-local}
     build:
       context: ./apps/web
     environment:
@@ -28,6 +29,7 @@ services:
     mem_limit: 384m
 
   api:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-diem10}/diem10lichsu-api:${IMAGE_TAG:-local}
     build:
       context: ./services/api
     environment:
@@ -35,10 +37,19 @@ services:
       APP_BASE_URL: ${APP_BASE_URL}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-diem10_session}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
+      OAUTH_STATE_TTL_SECONDS: ${OAUTH_STATE_TTL_SECONDS:-600}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
       R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_JSON: ${LOG_JSON:-false}
+      LOG_REQUEST_BODY: ${LOG_REQUEST_BODY:-true}
+      LOG_RESPONSE_BODY: ${LOG_RESPONSE_BODY:-true}
+      LOG_MAX_BODY_BYTES: ${LOG_MAX_BODY_BYTES:-65536}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
       interval: 30s
