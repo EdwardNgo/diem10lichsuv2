@@ -9,7 +9,7 @@ domain sản phẩm thực tế.
 
 ## Product contract hiện hành
 
-Product contract của ứng dụng Lịch sử THPT được tách theo domain:
+Product contract của Sử Văn Quán được tách theo domain:
 
 - [Tổng quan](overview.md): kết quả, người dùng, phạm vi và ranh giới phát hành.
 - [Định danh và truy cập](identity-and-access.md): Google login, session, vai trò và phân quyền.

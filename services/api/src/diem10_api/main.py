@@ -24,7 +24,7 @@ from diem10_api.middleware.request_logging import RequestLoggingMiddleware
 
 configure_logging()
 
-app = FastAPI(title="Điểm 10 Lịch sử API", version="0.1.0")
+app = FastAPI(title="Sử Văn Quán API", version="0.1.0")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(admin_router)
 app.include_router(admin_access_router)

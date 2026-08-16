@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { FeaturedExams } from "@/components/featured-exams";
 import { LandingSteps } from "@/components/landing-steps";
+import { SiteBrand } from "@/components/site-brand";
 import { SiteHeader } from "@/components/site-header";
 
 export default function Home() {
@@ -13,7 +14,7 @@ export default function Home() {
       >
         Bỏ qua điều hướng
       </a>
-      <SiteHeader active="home" />
+      <SiteHeader />
 
       <main id="noi-dung-chinh">
         <section className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1.04fr_0.96fr] lg:py-24">
@@ -142,9 +143,7 @@ export default function Home() {
       <footer className="border-t border-[#bae6fd] bg-white px-5 py-10 text-sm text-[#45667a] sm:px-8">
         <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="text-lg font-semibold tracking-tight text-[#123047]">
-              Điểm 10 <span className="text-[#0284c7]">Lịch sử</span>
-            </p>
+            <SiteBrand />
             <p className="mt-3 max-w-sm leading-6">
               Kho đề thi thử Lịch sử: tự biên soạn và tham khảo từ các nguồn
               khác.

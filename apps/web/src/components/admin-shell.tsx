@@ -25,7 +25,7 @@ export function AdminShell({
 }: AdminShellProps) {
   return (
     <div className="min-h-screen bg-[#f2fbff] text-[#123047]">
-      <SiteHeader active="admin" />
+      <SiteHeader />
 
       <main className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
         <p className="text-sm font-semibold tracking-[0.16em] text-[#0284c7]">

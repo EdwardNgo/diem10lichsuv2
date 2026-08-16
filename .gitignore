@@ -21,3 +21,4 @@ __pycache__/
 # Editor and operating system
 .DS_Store
 parser-source/*/*
+docs/brand/*

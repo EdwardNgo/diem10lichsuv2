@@ -2,7 +2,7 @@
 
 ## Kết quả mong muốn
 
-Điểm 10 Lịch sử giúp học sinh THPT Việt Nam ôn thi Lịch sử qua đề trắc nghiệm
+Sử Văn Quán giúp học sinh THPT Việt Nam ôn thi Lịch sử qua đề trắc nghiệm
 có giới hạn thời gian, lời giải ngay sau khi làm và lịch sử bài làm bền vững.
 Quản trị viên kiểm soát mọi nội dung đề trước khi học sinh nhìn thấy.
 

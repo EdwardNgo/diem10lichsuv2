@@ -17,7 +17,7 @@ type LoginModalProps = {
 };
 
 export function LoginModal({
-  body = "Dùng một nút duy nhất cho cả tài khoản mới và tài khoản đã có. Google sẽ xử lý bước chọn tài khoản cho bạn.",
+  body = "",
   errorCode = null,
   onClose,
   open,

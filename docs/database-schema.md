@@ -2,7 +2,7 @@
 
 ## Mục đích
 
-Tài liệu này là thiết kế dữ liệu triển khai được cho Điểm 10 Lịch sử. Nó bổ sung
+Tài liệu này là thiết kế dữ liệu triển khai được cho Sử Văn Quán. Nó bổ sung
 cho [decision 0003](decisions/0003-database-identity-and-topic-taxonomy.md):
 decision ghi lựa chọn bền vững, còn tài liệu này định nghĩa bảng, quan hệ, index
 và ràng buộc cần có.

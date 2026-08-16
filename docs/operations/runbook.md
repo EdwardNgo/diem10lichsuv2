@@ -2,7 +2,7 @@
 
 ## Mục Đích
 
-Tài liệu này mô tả cách chạy ứng dụng Điểm 10 Lịch sử trên local, UAT/VPS và
+Tài liệu này mô tả cách chạy ứng dụng Sử Văn Quán trên local, UAT/VPS và
 quy trình bắt buộc khi thay đổi có database migration.
 
 ## Môi Trường
