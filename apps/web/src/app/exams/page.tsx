@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { ExamBrowser } from "@/components/exam-browser";
 import { SiteHeader } from "@/components/site-header";
+import { withCanonical } from "@/lib/page-metadata";
+
+export const metadata: Metadata = withCanonical("/exams");
 
 export default function ExamsPage() {
   return (

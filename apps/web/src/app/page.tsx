@@ -1,9 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { FeaturedExams } from "@/components/featured-exams";
+import { withCanonical } from "@/lib/page-metadata";
 import { LandingSteps } from "@/components/landing-steps";
 import { SiteBrand } from "@/components/site-brand";
 import { SiteHeader } from "@/components/site-header";
+
+export const metadata: Metadata = withCanonical("/");
 
 export default function Home() {
   return (

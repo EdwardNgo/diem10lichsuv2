@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/site-header";
+import { withCanonical } from "@/lib/page-metadata";
 import { SITE_NAME } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withCanonical("/privacy", {
   title: `Chính sách bảo mật | ${SITE_NAME}`,
   description:
     `Chính sách bảo mật của ${SITE_NAME}: dữ liệu Google tối thiểu, lịch sử làm bài, thời hạn lưu và cách yêu cầu xóa dữ liệu.`,
-};
+});
 
 export default function PrivacyPage() {
   return (

@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/site-header";
+import { withCanonical } from "@/lib/page-metadata";
 import { SITE_NAME } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withCanonical("/terms", {
   title: `Điều khoản sử dụng | ${SITE_NAME}`,
   description:
     `Điều khoản sử dụng website ${SITE_NAME}, quy định quyền, nghĩa vụ và trách nhiệm khi truy cập hoặc sử dụng nền tảng.`,
-};
+});
 
 export default function TermsPage() {
   return (
