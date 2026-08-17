@@ -1,29 +1,30 @@
 import type { MetadataRoute } from "next";
 
 import { listPublicExamSlugs } from "@/lib/public-exams-server";
-import { absoluteUrl } from "@/lib/site-url";
+import { absoluteRequestUrl } from "@/lib/site-url";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: absoluteUrl("/"),
+      url: await absoluteRequestUrl("/"),
       changeFrequency: "weekly",
       priority: 1,
     },
     {
-      url: absoluteUrl("/exams"),
+      url: await absoluteRequestUrl("/exams"),
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: absoluteUrl("/privacy"),
+      url: await absoluteRequestUrl("/privacy"),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: absoluteUrl("/terms"),
+      url: await absoluteRequestUrl("/terms"),
       changeFrequency: "yearly",
       priority: 0.3,
     },
@@ -31,11 +32,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const examSlugs = await listPublicExamSlugs();
 
-  const examRoutes: MetadataRoute.Sitemap = examSlugs.map((slug) => ({
-    url: absoluteUrl(`/exams/${slug}`),
-    changeFrequency: "weekly",
-    priority: 0.8,
-  }));
+  const examRoutes: MetadataRoute.Sitemap = await Promise.all(
+    examSlugs.map(async (slug) => ({
+      url: await absoluteRequestUrl(`/exams/${slug}`),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    })),
+  );
 
   return [...staticRoutes, ...examRoutes];
 }
