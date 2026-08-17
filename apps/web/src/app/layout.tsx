@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
+import { getSiteUrl } from "@/lib/site-url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -10,6 +11,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   applicationName: SITE_NAME,
   title: `${SITE_NAME} | ${SITE_TAGLINE}`,
   description:
